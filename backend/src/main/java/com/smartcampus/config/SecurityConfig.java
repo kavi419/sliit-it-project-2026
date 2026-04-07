@@ -6,16 +6,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 
 /**
  * Spring Security configuration.
  *
  * Rules:
- *  - /api/bookings/**  → requires authentication (students must log in via Google)
+ *  - /api/bookings/** → requires authentication (students must log in via Google)
  *  - All other requests → permitted (public endpoints, static assets, OAuth2 flow)
- *  - OAuth2 login is enabled with our custom OAuth2UserService
- *  - On successful login the user is redirected to /dashboard
- *  - CSRF is disabled for simplicity; re-enable in production if using sessions
+ *  - OAuth2 login explicitly uses our OAuth2UserService (saves user to app_users)
+ *  - A SuccessHandler prints the user's attributes on every successful login
  */
 @Configuration
 @EnableWebSecurity
@@ -24,26 +24,47 @@ public class SecurityConfig {
 
     private final OAuth2UserService oAuth2UserService;
 
+    /**
+     * Prints all OAuth2 user attributes to terminal immediately after successful login.
+     * This confirms the login completed BEFORE our service ran into any DB issue.
+     */
+    @Bean
+    public AuthenticationSuccessHandler oAuth2SuccessHandler() {
+        return (request, response, authentication) -> {
+            System.out.println("=== LOGIN SUCCESS ===");
+            System.out.println("Principal: " + authentication.getName());
+            System.out.println("Authorities: " + authentication.getAuthorities());
+
+            // Print all Google attributes
+            if (authentication.getPrincipal() instanceof
+                    org.springframework.security.oauth2.core.user.OAuth2User oauthUser) {
+                oauthUser.getAttributes().forEach((key, value) ->
+                    System.out.println("  Attribute [" + key + "] = " + value)
+                );
+            }
+
+            System.out.println("=== Redirecting to /dashboard ===");
+            response.sendRedirect("/dashboard");
+        };
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // ── Authorization rules ──────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
-                // Students must be authenticated to access bookings API
                 .requestMatchers("/api/bookings/**").authenticated()
-                // Everything else is publicly accessible
                 .anyRequest().permitAll()
             )
 
             // ── OAuth2 Login (Google) ─────────────────────────────────────────
             .oauth2Login(oauth2 -> oauth2
-                // Use our custom service to save/update the user in app_users
+                // Explicitly wire our custom service to save/update user in app_users
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(oAuth2UserService)
                 )
-                // Redirect after a successful Google login
-                .defaultSuccessUrl("/dashboard", true)
-                // Redirect after logout
+                // Print all user attributes on success, then redirect
+                .successHandler(oAuth2SuccessHandler())
             )
 
             // ── Logout ────────────────────────────────────────────────────────
@@ -54,8 +75,6 @@ public class SecurityConfig {
             )
 
             // ── CSRF ─────────────────────────────────────────────────────────
-            // Disabled here for REST API convenience.
-            // If you add a frontend session-based form, re-enable CSRF.
             .csrf(csrf -> csrf.disable());
 
         return http.build();

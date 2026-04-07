@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /**
  * JPA Entity mapped to the app_users table.
+ * Fields are exactly what Google OAuth2 provides — no username or password.
  */
 @Entity
 @Table(name = "app_users")
@@ -21,20 +22,17 @@ public class UserEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
-    private String username;
+    @Column(nullable = false, length = 100)
+    private String name;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 150)
     private String email;
 
-    @Column(name = "password_hash")
-    private String passwordHash;
+    @Column(name = "google_id", unique = true, columnDefinition = "TEXT")
+    private String googleId;
 
     @Column(nullable = false, length = 30)
     private String role;
-
-    @Column(name = "google_id", unique = true, length = 255)
-    private String googleId;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
