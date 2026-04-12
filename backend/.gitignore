@@ -34,3 +34,6 @@ build/
 
 ### Secrets — never commit credentials ###
 src/main/resources/application.properties
+
+### Runtime logs ###
+*.log
