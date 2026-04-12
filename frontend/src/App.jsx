@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
+import TicketsMain from './pages/Tickets/TicketsMain';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         {/* App layout with navigation */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/tickets/*" element={<TicketsMain />} />
           
           {/* Placeholder routes for other features */}
           <Route path="/bookings" element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>} />
