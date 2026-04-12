@@ -84,16 +84,28 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
-    public TicketResponse getTicketById(Long id) {
-        TicketEntity ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    private TicketEntity findTicketByIdentifier(String identifier) {
+        if (identifier != null && identifier.toUpperCase().startsWith("TCK-")) {
+            return ticketRepository.findByTicketCode(identifier.toUpperCase())
+                    .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        }
+        try {
+            Long numericId = Long.parseLong(identifier);
+            return ticketRepository.findById(numericId)
+                    .orElseThrow(() -> new RuntimeException("Ticket not found"));
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid ticket identifier format");
+        }
+    }
+
+    public TicketResponse getTicketById(String id) {
+        TicketEntity ticket = findTicketByIdentifier(id);
         return mapToResponse(ticket);
     }
 
     @Transactional
-    public TicketResponse updateStatus(Long id, UpdateTicketStatusRequest request) {
-        TicketEntity ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    public TicketResponse updateStatus(String id, UpdateTicketStatusRequest request) {
+        TicketEntity ticket = findTicketByIdentifier(id);
         
         ticket.setStatus(request.getStatus());
         if (request.getStatus() == TicketStatus.REJECTED) {
@@ -104,9 +116,8 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse assignTechnician(Long id, AssignTechnicianRequest request) {
-        TicketEntity ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    public TicketResponse assignTechnician(String id, AssignTechnicianRequest request) {
+        TicketEntity ticket = findTicketByIdentifier(id);
         
         UserEntity tech = userRepository.findById(request.getTechnicianId())
                 .orElseThrow(() -> new RuntimeException("Technician not found"));
@@ -122,9 +133,8 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketResponse resolveTicket(Long id, ResolveTicketRequest request) {
-        TicketEntity ticket = ticketRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    public TicketResponse resolveTicket(String id, ResolveTicketRequest request) {
+        TicketEntity ticket = findTicketByIdentifier(id);
         
         ticket.setResolutionNotes(request.getResolutionNotes());
         ticket.setStatus(TicketStatus.RESOLVED);
@@ -133,9 +143,8 @@ public class TicketService {
     }
 
     @Transactional
-    public TicketCommentResponse addComment(Long ticketId, AddCommentRequest request, Long authorId) {
-        TicketEntity ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new RuntimeException("Ticket not found"));
+    public TicketCommentResponse addComment(String ticketId, AddCommentRequest request, Long authorId) {
+        TicketEntity ticket = findTicketByIdentifier(ticketId);
         UserEntity author = userRepository.findById(authorId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -191,8 +200,9 @@ public class TicketService {
         ticketCommentRepository.delete(comment);
     }
 
-    public List<TicketCommentResponse> getComments(Long ticketId) {
-        return ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId).stream()
+    public List<TicketCommentResponse> getComments(String ticketId) {
+        TicketEntity ticket = findTicketByIdentifier(ticketId);
+        return ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId()).stream()
                 .map(c -> TicketCommentResponse.builder()
                         .id(c.getId())
                         .ticketId(c.getTicket().getId())
@@ -204,8 +214,9 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
-    public List<TicketAttachmentResponse> getAttachments(Long ticketId) {
-        return ticketAttachmentRepository.findByTicketId(ticketId).stream()
+    public List<TicketAttachmentResponse> getAttachments(String ticketId) {
+        TicketEntity ticket = findTicketByIdentifier(ticketId);
+        return ticketAttachmentRepository.findByTicketId(ticket.getId()).stream()
                 .map(a -> {
                     String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                             .path("/uploads/")

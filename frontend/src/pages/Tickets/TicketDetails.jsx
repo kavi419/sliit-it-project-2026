@@ -176,7 +176,15 @@ const TicketDetails = () => {
                        </div>
                        <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl rounded-tl-none w-full shadow-sm">
                           <div className="flex items-center justify-between mb-2">
-                             <span className="font-bold text-slate-800 text-sm">{comment.authorName}</span>
+                             <div className="flex items-center gap-2">
+                               <span className="font-bold text-slate-800 text-sm">{comment.authorName}</span>
+                               {comment.authorName === ticket.createdBy && (
+                                 <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Reporter</span>
+                               )}
+                               {comment.authorName === ticket.assignedTechnician && (
+                                 <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Technician</span>
+                               )}
+                             </div>
                              <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
                                 <Clock className="w-3 h-3" /> {new Date(comment.createdAt).toLocaleString()}
                              </span>

@@ -10,4 +10,5 @@ import java.util.List;
 public interface TicketRepository extends JpaRepository<TicketEntity, Long> {
     List<TicketEntity> findByCreatedByIdOrderByCreatedAtDesc(Long userId);
     List<TicketEntity> findAllByOrderByCreatedAtDesc();
+    java.util.Optional<TicketEntity> findByTicketCode(String ticketCode);
 }

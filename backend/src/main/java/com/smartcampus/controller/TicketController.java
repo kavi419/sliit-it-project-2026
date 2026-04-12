@@ -71,7 +71,7 @@ public class TicketController {
     @GetMapping("/{id}")
     public ResponseEntity<TicketResponse> getTicketById(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id) {
+            @PathVariable String id) {
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.getTicketById(id));
     }
@@ -79,7 +79,7 @@ public class TicketController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateStatus(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody UpdateTicketStatusRequest request) {
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.updateStatus(id, request));
@@ -88,7 +88,7 @@ public class TicketController {
     @PatchMapping("/{id}/assign")
     public ResponseEntity<TicketResponse> assignTechnician(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody AssignTechnicianRequest request) {
         getAuthenticatedUser(oauth2User);
         // Add role check for Admin
@@ -98,7 +98,7 @@ public class TicketController {
     @PatchMapping("/{id}/resolve")
     public ResponseEntity<TicketResponse> resolveTicket(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody ResolveTicketRequest request) {
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.resolveTicket(id, request));
@@ -109,7 +109,7 @@ public class TicketController {
     @PostMapping("/{id}/comments")
     public ResponseEntity<TicketCommentResponse> addComment(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestBody AddCommentRequest request) {
         UserEntity user = getAuthenticatedUser(oauth2User);
         return new ResponseEntity<>(ticketService.addComment(id, request, user.getId()), HttpStatus.CREATED);
@@ -118,7 +118,7 @@ public class TicketController {
     @GetMapping("/{id}/comments")
     public ResponseEntity<List<TicketCommentResponse>> getComments(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id) {
+            @PathVariable String id) {
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.getComments(id));
     }
@@ -146,7 +146,7 @@ public class TicketController {
     @GetMapping("/{id}/attachments")
     public ResponseEntity<List<TicketAttachmentResponse>> getAttachments(
             @AuthenticationPrincipal OAuth2User oauth2User,
-            @PathVariable Long id) {
+            @PathVariable String id) {
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.getAttachments(id));
     }
