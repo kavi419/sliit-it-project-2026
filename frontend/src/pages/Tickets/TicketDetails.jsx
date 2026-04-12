@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { motion } from 'framer-motion';
+import api from '../../utils/axiosConfig';
+
 import { ArrowLeft, Send, CheckCircle2, AlertTriangle, Paperclip, Wrench, User as UserIcon, Clock } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
@@ -19,7 +19,8 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-const TicketDetails = () => {
+const TicketDetails = ({ role }) => {
+  const activeRole = role || 'USER';
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -39,10 +40,10 @@ const TicketDetails = () => {
     try {
       setLoading(true);
       const [ticketRes, commentsRes, attachmentsRes, techRes] = await Promise.all([
-        axios.get(`/api/tickets/${id}`),
-        axios.get(`/api/tickets/${id}/comments`),
-        axios.get(`/api/tickets/${id}/attachments`),
-        axios.get('/api/tickets/technicians').catch(() => ({ data: [] }))
+        api.get(`/api/tickets/${id}`),
+        api.get(`/api/tickets/${id}/comments`),
+        api.get(`/api/tickets/${id}/attachments`),
+        api.get('/api/tickets/technicians').catch(() => ({ data: [] }))
       ]);
       
       setTicket(ticketRes.data);
@@ -66,10 +67,10 @@ const TicketDetails = () => {
     e.preventDefault();
     if (!newComment.trim()) return;
     try {
-      await axios.post(`/api/tickets/${id}/comments`, { message: newComment });
+      await api.post(`/api/tickets/${id}/comments`, { message: newComment });
       setNewComment('');
       // Refresh comments
-      const updated = await axios.get(`/api/tickets/${id}/comments`);
+      const updated = await api.get(`/api/tickets/${id}/comments`);
       setComments(updated.data);
     } catch (err) {
       console.error(err);
@@ -78,7 +79,7 @@ const TicketDetails = () => {
 
   const handleAssign = async () => {
     try {
-      await axios.patch(`/api/tickets/${id}/assign`, { technicianId: assigneeId });
+      await api.patch(`/api/tickets/${id}/assign`, { technicianId: assigneeId });
       fetchDetails();
     } catch (err) {
       console.error(err);
@@ -87,7 +88,7 @@ const TicketDetails = () => {
 
   const handleResolve = async () => {
     try {
-      await axios.patch(`/api/tickets/${id}/resolve`, { resolutionNotes });
+      await api.patch(`/api/tickets/${id}/resolve`, { resolutionNotes });
       fetchDetails();
     } catch (err) {
       console.error(err);
@@ -96,7 +97,7 @@ const TicketDetails = () => {
 
   const handleClose = async () => {
     try {
-        await axios.patch(`/api/tickets/${id}/status`, { status: 'CLOSED' });
+        await api.patch(`/api/tickets/${id}/status`, { status: 'CLOSED' });
         fetchDetails();
     } catch (err) {
         console.error(err);
@@ -256,12 +257,12 @@ const TicketDetails = () => {
           </div>
 
           {/* Admin / Staff Actions block */}
-          {/* In a real app we'd wrap this in role checks. For now we expose it so user can test the workflow easily */}
-          <div className="glass-card p-6 border-t-4 border-t-amber-400">
-            <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 mt-2">Staff Controls</h3>
-            
-            <div className="space-y-6">
-               {(ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS') && (
+          {activeRole !== 'USER' && (
+            <div className="glass-card p-6 border-t-4 border-t-amber-400">
+              <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 mt-2">Staff Controls</h3>
+              
+              <div className="space-y-6">
+                {activeRole === 'ADMIN' && (ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS') && (
                  <div className="space-y-3">
                    <p className="text-xs font-bold text-slate-500">Assign Technician</p>
                    <div className="flex gap-2">
@@ -292,7 +293,7 @@ const TicketDetails = () => {
                  </div>
                )}
 
-               {ticket.status === 'IN_PROGRESS' && (
+               {activeRole === 'TECHNICIAN' && ticket.status === 'IN_PROGRESS' && (
                  <div className="space-y-3 pt-4 border-t border-slate-100">
                    <p className="text-xs font-bold text-slate-500">Resolve Issue</p>
                    <textarea
@@ -312,7 +313,7 @@ const TicketDetails = () => {
                  </div>
                )}
 
-               {ticket.status === 'RESOLVED' && (
+               {activeRole === 'ADMIN' && ticket.status === 'RESOLVED' && (
                    <div className="space-y-3 pt-4 border-t border-slate-100">
                        <div className="p-4 bg-blue-50 border border-blue-100 rounded-xl mb-4">
                            <p className="text-xs font-bold text-blue-800 mb-1">Resolution Notes</p>
@@ -326,8 +327,9 @@ const TicketDetails = () => {
                        </button>
                    </div>
                )}
-            </div>
+             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

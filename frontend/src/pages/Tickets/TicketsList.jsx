@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../../utils/axiosConfig';
 import { Plus, Search, Filter, Wrench, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import CreateTicketModal from '../../components/Tickets/CreateTicketModal';
@@ -29,7 +29,9 @@ const PriorityIcon = ({ priority }) => {
   }
 };
 
-const TicketsList = () => {
+const TicketsList = ({ role }) => {
+  // If no role, fallback to simulating USER
+  const activeRole = role || 'USER';
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL'); // ALL, MY
@@ -38,8 +40,16 @@ const TicketsList = () => {
   const fetchTickets = async () => {
     setLoading(true);
     try {
-      const endpoint = filter === 'MY' ? '/api/tickets/my' : '/api/tickets';
-      const res = await axios.get(endpoint);
+      let endpoint = '/api/tickets';
+      if (activeRole === 'USER') {
+        endpoint = '/api/tickets/my';
+      } else if (activeRole === 'TECHNICIAN') {
+        endpoint = '/api/tickets/assigned';
+      } else if (filter === 'MY') {
+        endpoint = '/api/tickets/my';
+      }
+      
+      const res = await api.get(endpoint);
       setTickets(res.data);
     } catch (err) {
       console.error(err);
@@ -61,29 +71,39 @@ const TicketsList = () => {
           </h1>
           <p className="text-slate-500 font-medium mt-2">Manage incidents and report issues across campus.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-1"
-        >
-          <Plus className="w-5 h-5" /> Report Issue
-        </button>
+        {activeRole !== 'TECHNICIAN' && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-1"
+          >
+            <Plus className="w-5 h-5" /> Report Issue
+          </button>
+        )}
       </header>
 
       <div className="flex items-center justify-between">
-        <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl max-w-sm w-full md:w-auto">
-          <button 
-            onClick={() => setFilter('ALL')}
-            className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-colors ${filter === 'ALL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            All Tickets
-          </button>
-          <button 
-             onClick={() => setFilter('MY')}
-             className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-colors ${filter === 'MY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-          >
-            My Reports
-          </button>
-        </div>
+        {activeRole === 'ADMIN' ? (
+          <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl max-w-sm w-full md:w-auto">
+            <button 
+              onClick={() => setFilter('ALL')}
+              className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-colors ${filter === 'ALL' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              All Tickets
+            </button>
+            <button 
+               onClick={() => setFilter('MY')}
+               className={`flex-1 md:flex-none px-6 py-2 text-sm font-bold rounded-lg transition-colors ${filter === 'MY' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+            >
+              My Reports
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl max-w-sm w-full md:w-auto">
+             <div className="px-6 py-2 text-sm font-bold rounded-lg bg-white text-indigo-600 shadow-sm">
+                {activeRole === 'TECHNICIAN' ? 'My Assigned Tickets' : 'My Reports'}
+             </div>
+          </div>
+        )}
         
         <div className="hidden md:flex relative w-64">
           <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />

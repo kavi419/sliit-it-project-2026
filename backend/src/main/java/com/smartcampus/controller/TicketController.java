@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,16 +23,22 @@ public class TicketController {
 
     private final TicketService ticketService;
     private final UserRepository userRepository;
+    private final HttpServletRequest request;
 
     private UserEntity getAuthenticatedUser(OAuth2User oauth2User) {
         if (oauth2User == null) {
             // Fallback for local testing without Google OAuth
-            UserEntity testUser = userRepository.findByEmail("test@student.lk").orElse(null);
+            String mockRole = request.getHeader("X-Mock-Role");
+            if (mockRole == null) mockRole = "USER";
+            
+            String mockEmail = mockRole.toLowerCase() + "@test.com";
+
+            UserEntity testUser = userRepository.findByEmail(mockEmail).orElse(null);
             if (testUser == null) {
                 testUser = new UserEntity();
-                testUser.setName("Test Student");
-                testUser.setEmail("test@student.lk");
-                testUser.setRole("USER");
+                testUser.setName("Mock " + mockRole);
+                testUser.setEmail(mockEmail);
+                testUser.setRole(mockRole.toUpperCase());
                 testUser = userRepository.save(testUser);
             }
             return testUser;
@@ -66,6 +73,13 @@ public class TicketController {
             @AuthenticationPrincipal OAuth2User oauth2User) {
         UserEntity user = getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.getMyTickets(user.getId()));
+    }
+
+    @GetMapping("/assigned")
+    public ResponseEntity<List<TicketResponse>> getAssignedTickets(
+            @AuthenticationPrincipal OAuth2User oauth2User) {
+        UserEntity user = getAuthenticatedUser(oauth2User);
+        return ResponseEntity.ok(ticketService.getAssignedTickets(user.getId()));
     }
 
     @GetMapping("/{id}")

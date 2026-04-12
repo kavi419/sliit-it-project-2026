@@ -84,6 +84,12 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    public List<TicketResponse> getAssignedTickets(Long techId) {
+        return ticketRepository.findByAssignedTechnicianIdOrderByCreatedAtDesc(techId).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
     private TicketEntity findTicketByIdentifier(String identifier) {
         if (identifier != null && identifier.toUpperCase().startsWith("TCK-")) {
             return ticketRepository.findByTicketCode(identifier.toUpperCase())

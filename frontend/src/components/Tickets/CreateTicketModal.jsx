@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, UploadCloud, File, XCircle } from 'lucide-react';
-import axios from 'axios';
+import api from '../../utils/axiosConfig';
 
 const CreateTicketModal = ({ isOpen, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -52,7 +52,7 @@ const CreateTicketModal = ({ isOpen, onClose, onSuccess }) => {
         data.append('files', file);
       });
 
-      await axios.post('/api/tickets', data);
+      await api.post('/api/tickets', data);
       
       onSuccess();
       onClose();
