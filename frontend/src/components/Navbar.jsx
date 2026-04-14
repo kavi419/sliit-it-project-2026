@@ -1,7 +1,24 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Bell, Search, User } from 'lucide-react';
 
 const Navbar = () => {
+  const [user, setUser] = useState({ name: 'Loading...', role: 'STUDENT' });
+
+  useEffect(() => {
+    axios.get('/api/dashboard')
+      .then(res => {
+        setUser({ 
+          name: res.data.name || 'Campus User', 
+          role: res.data.role || 'STUDENT' 
+        });
+      })
+      .catch(err => {
+        console.error('Navbar user fetch error:', err);
+        setUser({ name: 'Campus User', role: 'STUDENT' });
+      });
+  }, []);
+
   return (
     <header className="fixed top-0 right-0 left-64 h-20 glass z-40 border-b border-white/20 flex items-center justify-between px-10">
       <div className="relative w-96 group">
@@ -23,8 +40,10 @@ const Navbar = () => {
         
         <div className="flex items-center gap-4 pl-6 border-l border-white/20">
           <div className="text-right">
-            <p className="text-sm font-semibold text-slate-800">Campus User</p>
-            <p className="text-xs text-slate-500">Student</p>
+            <p className="text-sm font-semibold text-slate-800">{user.name}</p>
+            <p className={`text-xs uppercase tracking-widest font-semibold ${user.role === 'ADMIN' ? 'text-rose-600' : 'text-slate-500'}`}>
+              {user.role}
+            </p>
           </div>
           <div className="h-10 w-10 rounded-xl glass flex items-center justify-center text-indigo-600">
             <User className="w-6 h-6" />

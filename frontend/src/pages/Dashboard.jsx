@@ -35,7 +35,7 @@ const ResourceCard = ({ title, status, image, onBook }) => (
 );
 
 const Dashboard = () => {
-  const [user, setUser] = useState({ name: 'Kavindu Nethmina', email: 'kavindu@gmail.com' });
+  const [user, setUser] = useState({ name: 'Loading...', email: '', role: 'STUDENT' });
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dateStr, setDateStr] = useState('');
@@ -48,8 +48,12 @@ const Dashboard = () => {
     // Fetch user details
     axios.get('/api/dashboard')
       .then(res => {
-        // Manually setting based on user info if available
-        setUser({ name: 'Kavindu Nethmina', email: 'kavindu@gmail.com' });
+        // Set state based on backend identity
+        setUser({ 
+          name: res.data.name || 'Campus User', 
+          email: res.data.email || '', 
+          role: res.data.role || 'STUDENT' 
+        });
       })
       .catch(err => console.error('User fetch error:', err));
   }, []);
@@ -81,10 +85,35 @@ const Dashboard = () => {
           </div>
           <div>
             <p className="text-sm font-bold text-slate-800">{user.name}</p>
-            <p className="text-xs font-semibold text-indigo-600 uppercase tracking-widest">Student</p>
+            <p className={`text-xs font-semibold uppercase tracking-widest ${user.role === 'ADMIN' ? 'text-rose-600' : 'text-indigo-600'}`}>
+              {user.role}
+            </p>
           </div>
         </div>
       </header>
+
+      {user.role === 'ADMIN' && (
+        <section className="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="p-2 bg-indigo-600 text-white rounded-xl shadow-sm">
+              <User className="w-5 h-5" />
+            </span>
+            <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Admin Panel</h3>
+          </div>
+          <p className="text-indigo-900/70 font-medium mb-6">You have administrative access to manage campus resources and view all system-wide bookings.</p>
+          <div className="flex flex-wrap gap-4">
+            <button className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-sm hover:bg-indigo-700 transition tracking-tight">
+              Manage Resources
+            </button>
+            <button className="px-6 py-2.5 bg-white text-indigo-600 border border-indigo-200 font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition tracking-tight">
+              View All Bookings
+            </button>
+            <button className="px-6 py-2.5 bg-white text-indigo-600 border border-indigo-200 font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition tracking-tight">
+              System Settings
+            </button>
+          </div>
+        </section>
+      )}
 
       <section>
         <div className="flex items-center justify-between mb-8">
@@ -104,7 +133,9 @@ const Dashboard = () => {
 
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2 space-y-6">
-          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Recent Bookings</h3>
+          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">
+            {user.role === 'ADMIN' ? 'All Recent Bookings' : 'Your Recent Bookings'}
+          </h3>
           <div className="glass-card divide-y divide-slate-100 overflow-hidden">
             {[1, 2].map((i) => (
               <div key={i} className="p-8 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group">

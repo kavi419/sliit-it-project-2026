@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
+import ModernLogin from './components/ModernLogin';
 
 function App() {
   return (
@@ -9,6 +10,9 @@ function App() {
       <Routes>
         {/* Default route redirects to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        
+        {/* Login route */}
+        <Route path="/login" element={<ModernLogin />} />
         
         {/* App layout with navigation */}
         <Route element={<MainLayout />}>
