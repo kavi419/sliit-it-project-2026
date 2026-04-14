@@ -78,6 +78,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 .googleId(googleId)
                 .email(email)
                 .name(name != null ? name : "Unknown")
+                .fullName(name)
                 .role(targetRole)
                 .build();
 
