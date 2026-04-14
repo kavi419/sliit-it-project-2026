@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
@@ -59,6 +60,8 @@ const Spinner = () => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ModernLogin = () => {
+  const navigate = useNavigate();
+
   const [step, setStep]         = useState(STEP_EMAIL);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
 
@@ -103,19 +106,60 @@ const ModernLogin = () => {
   };
 
   // ── Sign In submit ──────────────────────────────────────────────────────────
-  const handleSignIn = (e) => {
+  const handleSignIn = async (e) => {
     e.preventDefault();
     if (!password.trim()) { setError('Please enter your password.'); return; }
-    // TODO: wire up actual sign-in API
-    alert(`Sign In: ${email}`);
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data } = await axios.post(
+        'http://localhost:8080/api/auth/login',
+        { email: email.trim().toLowerCase(), password }
+      );
+
+      // Redirect based on role and status
+      if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') {
+        navigate('/waiting');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Invalid email or password.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Sign Up submit ──────────────────────────────────────────────────────────
-  const handleSignUp = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
     if (!password.trim()) { setError('Please create a password.'); return; }
-    // TODO: wire up actual sign-up API
-    alert(`Create Account: ${email} | Role: ${role}`);
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { data } = await axios.post(
+        'http://localhost:8080/api/auth/register',
+        { email: email.trim().toLowerCase(), password, role }
+      );
+
+      // Admin accounts need approval before accessing dashboard
+      if (data.status === 'PENDING_ADMIN') {
+        navigate('/waiting');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Registration failed. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ── Google OAuth ────────────────────────────────────────────────────────────
@@ -244,12 +288,13 @@ const ModernLogin = () => {
               <button
                 id="btn-signin"
                 type="submit"
-                className="w-full py-4 px-4 flex items-center justify-center
+                disabled={loading}
+                className="w-full py-4 px-4 flex items-center justify-center gap-2
                   bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500
                   text-white font-semibold rounded-2xl shadow-xl hover:shadow-2xl
-                  transition-all active:scale-[0.98]"
+                  transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Sign In
+                {loading ? <Spinner /> : 'Sign In'}
               </button>
             </form>
           </motion.div>
@@ -325,12 +370,13 @@ const ModernLogin = () => {
               <button
                 id="btn-create-account"
                 type="submit"
-                className="w-full py-4 px-4 flex items-center justify-center
+                disabled={loading}
+                className="w-full py-4 px-4 flex items-center justify-center gap-2
                   bg-gradient-to-r from-violet-600 to-purple-700 hover:from-violet-500 hover:to-purple-600
                   text-white font-semibold rounded-2xl shadow-xl hover:shadow-2xl
-                  transition-all active:scale-[0.98]"
+                  transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Create Account
+                {loading ? <Spinner /> : 'Create Account'}
               </button>
             </form>
 

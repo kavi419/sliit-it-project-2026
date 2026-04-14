@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
 import ModernLogin from './components/ModernLogin';
+import WaitingPage from './pages/WaitingPage';
 
 function App() {
   return (
@@ -10,14 +11,17 @@ function App() {
       <Routes>
         {/* Default route redirects to dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        
+
         {/* Login route */}
         <Route path="/login" element={<ModernLogin />} />
-        
+
+        {/* Pending admin approval page (no layout wrapper — standalone) */}
+        <Route path="/waiting" element={<WaitingPage />} />
+
         {/* App layout with navigation */}
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          
+
           {/* Placeholder routes for other features */}
           <Route path="/bookings" element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>} />
           <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />

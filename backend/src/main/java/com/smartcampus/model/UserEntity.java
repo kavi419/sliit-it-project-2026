@@ -7,7 +7,8 @@ import java.time.LocalDateTime;
 
 /**
  * JPA Entity mapped to the app_users table.
- * Fields are exactly what Google OAuth2 provides — no username or password.
+ * Supports both Google OAuth2 users (no password) and
+ * email/password self-registered users (no googleId).
  */
 @Entity
 @Table(name = "app_users")
@@ -33,6 +34,20 @@ public class UserEntity {
 
     @Column(nullable = false, length = 30)
     private String role;
+
+    /**
+     * BCrypt-hashed password. NULL for Google OAuth2 users.
+     */
+    @Column(columnDefinition = "TEXT")
+    private String password;
+
+    /**
+     * Account status. Values: ACTIVE | PENDING_ADMIN
+     * New admin self-registrations start as PENDING_ADMIN until approved.
+     */
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private String status = "ACTIVE";
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
