@@ -106,9 +106,11 @@ public class SecurityConfig {
 
             // ── Logout ────────────────────────────────────────────────────────
             .logout(logout -> logout
-                .logoutSuccessUrl("/")
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("http://localhost:5173/login")
                 .invalidateHttpSession(true)
                 .clearAuthentication(true)
+                .deleteCookies("JSESSIONID")
             )
 
             // ── CSRF ─────────────────────────────────────────────────────────

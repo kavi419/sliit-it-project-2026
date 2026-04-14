@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
@@ -60,7 +61,8 @@ const Spinner = () => (
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const ModernLogin = () => {
-  const navigate = useNavigate();
+  const navigate      = useNavigate();
+  const { login }     = useAuth();
 
   const [step, setStep]         = useState(STEP_EMAIL);
   const [direction, setDirection] = useState(1); // 1 = forward, -1 = back
@@ -119,7 +121,9 @@ const ModernLogin = () => {
         { email: email.trim().toLowerCase(), password }
       );
 
-      // Redirect based on role and status
+      // Save to global auth context then redirect
+      login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
+
       if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') {
         navigate('/waiting');
       } else {
@@ -148,7 +152,9 @@ const ModernLogin = () => {
         { email: email.trim().toLowerCase(), password, role }
       );
 
-      // Admin accounts need approval before accessing dashboard
+      // Save to global auth context then redirect
+      login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
+
       if (data.status === 'PENDING_ADMIN') {
         navigate('/waiting');
       } else {
