@@ -42,10 +42,16 @@ public class UserEntity {
     private String password;
 
     /**
-     * Account status. Values: ACTIVE | PENDING_ADMIN
-     * New admin self-registrations start as PENDING_ADMIN until approved.
+     * Account status.
+     * Values: ACTIVE | PENDING_ADMIN
+     *
+     * IMPORTANT: columnDefinition includes "DEFAULT 'ACTIVE'" so that
+     * ddl-auto=update can ALTER the existing app_users table (which already
+     * has rows from Google OAuth) without failing the NOT NULL constraint.
+     * The @Builder.Default sets the Java-side default; the SQL DEFAULT
+     * handles existing rows at migration time.
      */
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 30, columnDefinition = "VARCHAR(30) DEFAULT 'ACTIVE'")
     @Builder.Default
     private String status = "ACTIVE";
 
@@ -55,5 +61,14 @@ public class UserEntity {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+        // Safety guards — ensure required fields are never null at persist time.
+        // Protects against the @Builder.Default + @AllArgsConstructor Lombok
+        // interaction where the all-args constructor bypasses builder defaults.
+        if (this.status == null) {
+            this.status = "ACTIVE";
+        }
+        if (this.role == null) {
+            this.role = "STUDENT";
+        }
     }
 }

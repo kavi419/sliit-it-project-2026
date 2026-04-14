@@ -76,6 +76,9 @@ public class AuthController {
         String password = request.get("password");
         String role     = request.get("role");
 
+        logger.info("register: received → email={}, role={}, passwordLength={}",
+                email, role, password != null ? password.length() : "null");
+
         // ── Validation ──────────────────────────────────────────────────────
         if (email == null || email.trim().isEmpty()) {
             return error(HttpStatus.BAD_REQUEST, "Email is required.");
@@ -96,24 +99,41 @@ public class AuthController {
         }
 
         // ── Determine status ────────────────────────────────────────────────
-        // Admin self-registrations are placed in PENDING_ADMIN and must be
-        // approved by a super-admin before they can access restricted areas.
         String status = "ADMIN".equals(role) ? "PENDING_ADMIN" : "ACTIVE";
 
-        // ── Build & save user ───────────────────────────────────────────────
+        // ── Hash password ────────────────────────────────────────────────────
+        String hashedPassword;
+        try {
+            hashedPassword = passwordEncoder.encode(password);
+            logger.info("register: password hashed successfully for {}", trimmedEmail);
+        } catch (Exception e) {
+            logger.error("register: BCrypt encoding failed for {}: {}", trimmedEmail, e.getMessage(), e);
+            return error(HttpStatus.INTERNAL_SERVER_ERROR, "Password processing failed. Please try again.");
+        }
+
+        // ── Build user ───────────────────────────────────────────────────────
         UserEntity newUser = UserEntity.builder()
                 .email(trimmedEmail)
-                .name(trimmedEmail)                          // placeholder; update later
-                .password(passwordEncoder.encode(password)) // BCrypt hash
+                .name(trimmedEmail)       // placeholder name; update later via profile
+                .password(hashedPassword)
                 .role(role)
                 .status(status)
                 .build();
 
+        logger.info("register: entity built → email={}, role={}, status={}, passwordIsNull={}",
+                newUser.getEmail(), newUser.getRole(), newUser.getStatus(), newUser.getPassword() == null);
+
+        // ── Save ─────────────────────────────────────────────────────────────
         try {
             userRepository.save(newUser);
-            logger.info("register: created user {} as {} with status {}", trimmedEmail, role, status);
+            logger.info("register: SUCCESS — created user {} as {} with status {}", trimmedEmail, role, status);
         } catch (Exception e) {
-            logger.error("register: DB error for {}", trimmedEmail, e);
+            // Log the full cause chain to make SQL errors visible in the terminal
+            Throwable cause = e;
+            while (cause != null) {
+                logger.error("register: DB error [{}] → {}", cause.getClass().getSimpleName(), cause.getMessage());
+                cause = cause.getCause();
+            }
             return error(HttpStatus.INTERNAL_SERVER_ERROR, "Registration failed. Please try again.");
         }
 
