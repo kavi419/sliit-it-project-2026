@@ -7,6 +7,11 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Spring Security configuration.
@@ -25,8 +30,25 @@ public class SecurityConfig {
     private final OAuth2UserService oAuth2UserService;
 
     /**
-     * Prints all OAuth2 user attributes to terminal immediately after successful login.
-     * This confirms the login completed BEFORE our service ran into any DB issue.
+     * Global CORS policy — allows the React dev server (ports 5173 & 5174)
+     * to send credentialed requests to the Spring Boot backend.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
+    /**
+     * Prints all OAuth2 user attributes to terminal immediately after successful login,
+     * then redirects the browser back to the React frontend dashboard.
      */
     @Bean
     public AuthenticationSuccessHandler oAuth2SuccessHandler() {
@@ -43,14 +65,18 @@ public class SecurityConfig {
                 );
             }
 
-            System.out.println("=== Redirecting to /dashboard ===");
-            response.sendRedirect("/dashboard");
+            // ── Redirect to the React frontend dashboard, NOT the backend JSON endpoint ──
+            System.out.println("=== Redirecting to React frontend dashboard ===");
+            response.sendRedirect("http://localhost:5173/dashboard");
         };
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // ── CORS ─────────────────────────────────────────────────────────
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
             // ── Authorization rules ──────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/bookings/**").authenticated()
