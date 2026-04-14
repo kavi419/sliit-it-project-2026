@@ -24,28 +24,42 @@ public class DashboardController {
     private final UserRepository userRepository;
 
     // ── GET /api/dashboard ─────────────────────────────────────────────────────
-    // Returns the currently logged-in Google OAuth2 user's profile + role/status.
+    // Returns the logged-in Google OAuth2 user's profile + DB role/status.
+    // Called by the Vite proxy: frontend /api/dashboard → backend /api/dashboard
     @GetMapping("/api/dashboard")
-    public ResponseEntity<Map<String, Object>> dashboard(@AuthenticationPrincipal OAuth2User user) {
-        if (user == null) {
+    public ResponseEntity<Map<String, Object>> dashboard(@AuthenticationPrincipal OAuth2User oauthUser) {
+        if (oauthUser == null) {
             return ResponseEntity.status(401).build();
         }
 
-        String email = user.getAttribute("email");
-        UserEntity dbUser = userRepository.findByEmail(email).orElse(null);
+        String email = oauthUser.getAttribute("email");
+        return buildUserResponse(email, oauthUser.getAttributes());
+    }
 
-        Map<String, Object> response = new HashMap<>(user.getAttributes());
-        if (dbUser != null) {
-            response.put("role",   dbUser.getRole());
-            response.put("status", dbUser.getStatus());
-            response.put("name",   dbUser.getName());
-            response.put("email",  dbUser.getEmail());
-        } else {
-            response.put("role",   "STUDENT");
-            response.put("status", "ACTIVE");
+    // ── GET /api/user/me ───────────────────────────────────────────────────────
+    // Unified "who am I?" endpoint.
+    //  - OAuth2 session present  → reads DB role/status for the Google user
+    //  - ?email=... param given  → looks up that email in the DB directly
+    //    (used by AuthContext after email/password login where there is no
+    //     server-side Spring Security session)
+    // Returns 200 with user payload, or 404 when not found.
+    @GetMapping("/api/user/me")
+    public ResponseEntity<Map<String, Object>> userMe(
+            @AuthenticationPrincipal OAuth2User oauthUser,
+            @RequestParam(required = false) String email) {
+
+        // Priority 1: OAuth2 session in Spring Security context
+        if (oauthUser != null) {
+            String oauthEmail = oauthUser.getAttribute("email");
+            return buildUserResponse(oauthEmail, oauthUser.getAttributes());
         }
 
-        return ResponseEntity.ok(response);
+        // Priority 2: explicit email param (email/password users)
+        if (email != null && !email.isBlank()) {
+            return buildUserResponse(email.trim().toLowerCase(), Map.of());
+        }
+
+        return ResponseEntity.status(401).build();
     }
 
     // ── GET /api/admin/pending-users ───────────────────────────────────────────
@@ -83,5 +97,27 @@ public class DashboardController {
                     return ResponseEntity.ok(body);
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    // ── Private helper ─────────────────────────────────────────────────────────
+    private ResponseEntity<Map<String, Object>> buildUserResponse(
+            String email, Map<String, Object> baseAttributes) {
+
+        UserEntity dbUser = userRepository.findByEmail(email).orElse(null);
+        Map<String, Object> response = new HashMap<>(baseAttributes);
+
+        if (dbUser != null) {
+            // Always prefer DB values — they are the source of truth for role/status
+            response.put("role",   dbUser.getRole());
+            response.put("status", dbUser.getStatus() != null ? dbUser.getStatus() : "ACTIVE");
+            response.put("name",   dbUser.getName());
+            response.put("email",  dbUser.getEmail());
+        } else {
+            response.put("role",   "STUDENT");
+            response.put("status", "ACTIVE");
+            response.put("email",  email);
+        }
+
+        return ResponseEntity.ok(response);
     }
 }
