@@ -35,21 +35,36 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         System.out.println("Email     : " + email);
         System.out.println("Name      : " + name);
 
+        boolean isAdmin = email != null && email.startsWith("kavindunethmina");
+        String targetRole = isAdmin ? "ADMIN" : "STUDENT";
+
         // Step 2: Check if user already exists
         var existingOpt = userRepository.findByEmail(email);
 
         if (existingOpt.isPresent()) {
             UserEntity existingUser = existingOpt.get();
+            boolean needsUpdate = false;
+
             if (existingUser.getGoogleId() == null) {
                 existingUser.setGoogleId(googleId);
-                System.out.println("DEBUG: DB Save attempted for: " + email);
+                needsUpdate = true;
+                System.out.println("Linked Google ID to existing user: " + email);
+            }
+
+            if (isAdmin && !"ADMIN".equals(existingUser.getRole())) {
+                existingUser.setRole("ADMIN");
+                needsUpdate = true;
+                System.out.println("Upgraded existing user to ADMIN role: " + email);
+            }
+
+            if (needsUpdate) {
+                System.out.println("DEBUG: DB Update attempted for: " + email);
                 try {
                     userRepository.save(existingUser);
                     userRepository.flush();
-                    System.out.println("User saved successfully");
-                    System.out.println("Linked Google ID to existing user: " + email);
+                    System.out.println("User updated successfully");
                 } catch (Exception e) {
-                    System.out.println("ERROR saving user: " + e.getMessage());
+                    System.out.println("ERROR updating user: " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
@@ -63,7 +78,8 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 .googleId(googleId)
                 .email(email)
                 .name(name != null ? name : "Unknown")
-                .role("STUDENT")
+                .fullName(name)
+                .role(targetRole)
                 .build();
 
         System.out.println("DEBUG: DB Save attempted for: " + email);
