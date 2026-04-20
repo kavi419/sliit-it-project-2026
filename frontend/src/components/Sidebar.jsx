@@ -1,11 +1,6 @@
 import React from 'react';
- feature/sachini/incident-ticket
-import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Layout, User, Settings, LogOut, Wrench } from 'lucide-react';
-
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Layout, User, Settings, LogOut } from 'lucide-react';
- feature/kavindu/auth-setup
+import { Home, Calendar, Layout, User, Settings, LogOut, Wrench, ClipboardList } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -53,6 +48,7 @@ const Sidebar = () => {
       <nav className="mt-8 flex flex-col gap-1">
         <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
         <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
+        <SidebarItem to="/tickets"   icon={Wrench}    label="Maintenance" />
         <SidebarItem to="/profile"   icon={User}      label="Profile"    />
         <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
       </nav>
