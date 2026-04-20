@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
+import Resources from './pages/Resources';
 import TicketsMain from './pages/Tickets/TicketsMain';
 import ModernLogin from './components/ModernLogin';
 import WaitingPage from './pages/WaitingPage';
@@ -58,6 +59,7 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="/tickets/*" element={<TicketsMain />} />
             <Route
               path="/bookings"
