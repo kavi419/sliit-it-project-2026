@@ -5,6 +5,7 @@ import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
 import ModernLogin from './components/ModernLogin';
 import WaitingPage from './pages/WaitingPage';
+import Bookings from './pages/Bookings';
 
 /**
  * ProtectedRoute — guards routes that require an active session.
@@ -60,7 +61,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/bookings" element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>} />
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
             <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
           </Route>
