@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
+  const navigate = useNavigate();
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -22,11 +24,12 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
         endTime: `${date}T${endTime}:00`
       };
 
-      await axios.post('/api/bookings', payload);
+      await axios.post('/api/bookings', payload, { withCredentials: true });
       onBookingSuccess();
       onClose();
+      navigate('/bookings');
     } catch (err) {
-      console.error('Booking failed:', err);
+      console.error('Booking failed:', err.response ? err.response.data : err.message);
       setError('Failed to create booking. Please check your time slots.');
     } finally {
       setLoading(false);

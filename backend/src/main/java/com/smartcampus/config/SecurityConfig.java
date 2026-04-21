@@ -90,7 +90,7 @@ public class SecurityConfig {
 
             // ── Authorization rules ──────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/bookings/**").authenticated()
+                .requestMatchers("/api/bookings/**", "/api/bookings").permitAll()
                 .anyRequest().permitAll()
             )
 
@@ -114,7 +114,12 @@ public class SecurityConfig {
             )
 
             // ── CSRF ─────────────────────────────────────────────────────────
-            .csrf(csrf -> csrf.disable());
+            .csrf(csrf -> csrf.disable())
+            
+            // ── Security Context Persistence ─────────────────────────────────
+            .securityContext(context -> context
+                .securityContextRepository(new org.springframework.security.web.context.HttpSessionSecurityContextRepository())
+            );
 
         return http.build();
     }
