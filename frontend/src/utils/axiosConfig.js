@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const api = axios.create();
 
+api.defaults.withCredentials = true;
+
 // Add a request interceptor to attach the simulated role header
 api.interceptors.request.use(
   (config) => {
