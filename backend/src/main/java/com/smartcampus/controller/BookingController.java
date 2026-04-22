@@ -154,27 +154,104 @@ public class BookingController {
     }
 
     /**
-     * User: Cancel a booking (if PENDING or APPROVED).
+     * Cancel a booking. Users can cancel their own, Admins can cancel any.
      */
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
         String email = getAuthEmail();
+        logger.info("cancelBooking: Request for id={} by user={}", id, email);
         if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
+        UserEntity currentUser = userRepository.findByEmail(email).orElse(null);
+        if (currentUser == null) {
+            logger.warn("cancelBooking: Current user not found in DB: {}", email);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         return bookingRepository.findById(id).map(b -> {
-            if (!b.getUser().getEmail().equals(email)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            if ("CANCELLED".equals(b.getStatus())) return ResponseEntity.badRequest().body("Already cancelled.");
+            boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+            boolean isOwner = b.getUser().getEmail().equals(email);
+
+            logger.info("cancelBooking: Booking found. Owner={}, IsAdmin={}, CurrentRole={}", 
+                b.getUser().getEmail(), isAdmin, currentUser.getRole());
+
+            if (!isOwner && !isAdmin) {
+                logger.warn("cancelBooking: Permission denied. User {} is not owner or admin.", email);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
             
             b.setStatus("CANCELLED");
-            return ResponseEntity.ok(bookingRepository.save(b));
-        }).orElse(ResponseEntity.notFound().build());
+            BookingEntity saved = bookingRepository.save(b);
+            logger.info("cancelBooking: SUCCESS for id={}. New status={}", id, saved.getStatus());
+            return ResponseEntity.ok(saved);
+        }).orElseGet(() -> {
+            logger.warn("cancelBooking: Booking not found for id={}", id);
+            return ResponseEntity.notFound().build();
+        });
+    }
+
+    /**
+     * Update an existing booking.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateBooking(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        String email = getAuthEmail();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login required.");
+
+        try {
+            return bookingRepository.findById(id).map(existingBooking -> {
+                // Security: Must be the owner
+                if (!existingBooking.getUser().getEmail().equals(email)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this booking.");
+                }
+
+                // Business Rule: Can only edit PENDING or REJECTED (?)
+                // Let's say we allow editing but it resets status to PENDING
+                
+                String resourceName = (String) payload.get("resourceName");
+                String purpose = (String) payload.get("purpose");
+                Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : existingBooking.getAttendeesCount();
+                LocalDateTime start = LocalDateTime.parse(payload.get("startTime").toString());
+                LocalDateTime end = LocalDateTime.parse(payload.get("endTime").toString());
+
+                // Conflict Detection (excluding current booking)
+                List<BookingEntity> conflicts = bookingRepository.findOverlappingBookingsExcluding(resourceName, start, end, id);
+                if (!conflicts.isEmpty()) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT)
+                            .body("Conflict: This resource is already booked during the selected time.");
+                }
+
+                existingBooking.setResourceName(resourceName);
+                existingBooking.setPurpose(purpose);
+                existingBooking.setAttendeesCount(attendees);
+                existingBooking.setStartTime(start);
+                existingBooking.setEndTime(end);
+                existingBooking.setStatus("PENDING"); // Reset to pending after edit
+
+                return ResponseEntity.ok(bookingRepository.save(existingBooking));
+            }).orElse(ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            logger.error("Update error: ", e);
+            return ResponseEntity.badRequest().body("Invalid booking data: " + e.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBooking(@PathVariable Long id) {
-        // Keep supporting delete for basic cleanup if needed, but 'cancel' is the preferred workflow
-        if (!bookingRepository.existsById(id)) return ResponseEntity.notFound().build();
-        bookingRepository.deleteById(id);
-        return ResponseEntity.ok().build();
+        String email = getAuthEmail();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        UserEntity currentUser = userRepository.findByEmail(email).orElse(null);
+        if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        return bookingRepository.findById(id).map(b -> {
+            boolean isAdmin = "ADMIN".equals(currentUser.getRole());
+            boolean isOwner = b.getUser().getEmail().equals(email);
+
+            if (!isOwner && !isAdmin) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            
+            bookingRepository.delete(b);
+            return ResponseEntity.ok().build();
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

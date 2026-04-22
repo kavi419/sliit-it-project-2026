@@ -33,4 +33,11 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
             @org.springframework.data.repository.query.Param("resourceName") String resourceName,
             @org.springframework.data.repository.query.Param("startTime") java.time.LocalDateTime startTime,
             @org.springframework.data.repository.query.Param("endTime") java.time.LocalDateTime endTime);
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM BookingEntity b WHERE b.resourceName = :resourceName " +
+            "AND b.status = 'APPROVED' AND b.id <> :excludeId AND b.startTime < :endTime AND b.endTime > :startTime")
+    List<BookingEntity> findOverlappingBookingsExcluding(
+            @org.springframework.data.repository.query.Param("resourceName") String resourceName,
+            @org.springframework.data.repository.query.Param("startTime") java.time.LocalDateTime startTime,
+            @org.springframework.data.repository.query.Param("endTime") java.time.LocalDateTime endTime,
+            @org.springframework.data.repository.query.Param("excludeId") Long excludeId);
 }

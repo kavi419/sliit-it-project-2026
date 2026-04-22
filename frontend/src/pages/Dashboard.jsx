@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, Shield, Users, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
 
@@ -162,6 +163,7 @@ const UserManagementTab = () => {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const { user }                              = useAuth();
+  const navigate                              = useNavigate();
   const [activeTab, setActiveTab]             = useState('overview');
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen]         = useState(false);
@@ -182,6 +184,24 @@ const Dashboard = () => {
     { title: 'Auditorium',     status: 'Occupied',  image: 'https://images.unsplash.com/photo-1505373633560-eb0a6f2a5100?auto=format&fit=crop&q=80&w=800' },
     { title: 'Library Zone B', status: 'Available', image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=800' },
   ];
+
+  const [recentBookings, setRecentBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+
+  useEffect(() => {
+    const fetchRecent = async () => {
+      try {
+        const url = isAdmin ? '/api/bookings' : '/api/bookings/my';
+        const response = await axios.get(`http://localhost:8080${url}`, { withCredentials: true });
+        setRecentBookings(response.data.slice(0, 3)); // Show top 3
+      } catch (err) {
+        console.error('Failed to fetch dashboard bookings:', err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+    fetchRecent();
+  }, [isAdmin]);
 
   const staggerContainer = {
     hidden: {},
@@ -259,7 +279,7 @@ const Dashboard = () => {
                   </p>
                   <div className="flex flex-wrap gap-3">
                     <button className="px-5 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">Manage Resources</button>
-                    <button className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition">View All Bookings</button>
+                    <button onClick={() => navigate('/bookings')} className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition">View All Bookings</button>
                     <button
                       onClick={() => setActiveTab('users')}
                       className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition flex items-center gap-2">
@@ -290,26 +310,58 @@ const Dashboard = () => {
             {/* Bookings + Activity */}
             <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-4">
-                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
-                  {isAdmin ? 'All Recent Bookings' : 'Your Recent Bookings'}
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                    {isAdmin ? 'All Recent Bookings' : 'Your Recent Bookings'}
+                  </h3>
+                  <button 
+                    onClick={() => navigate('/bookings')}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                  >
+                    View All
+                  </button>
+                </div>
+                
                 <div className="glass-card divide-y divide-slate-100 overflow-hidden">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group">
-                      <div className="flex items-center gap-5">
-                        <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                          <Calendar className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900 tracking-tight">IoT Lab Session</p>
-                          <p className="text-slate-400 font-medium mt-0.5 text-sm">Apr 10, 2026 • 09:00 AM - 11:00 AM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-indigo-600 font-bold group-hover:gap-3 transition-all text-sm pr-2">
-                        View <ArrowRight className="w-4 h-4" />
-                      </div>
+                  {loadingBookings ? (
+                    <div className="p-10 flex justify-center">
+                      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                     </div>
-                  ))}
+                  ) : recentBookings.length === 0 ? (
+                    <div className="p-12 text-center text-slate-400 font-medium">
+                      No recent bookings found.
+                    </div>
+                  ) : (
+                    recentBookings.map((booking) => (
+                      <div 
+                        key={booking.id} 
+                        onClick={() => navigate('/bookings')}
+                        className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                            <Calendar className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 tracking-tight">{booking.resourceName}</p>
+                            <p className="text-slate-400 font-medium mt-0.5 text-sm">
+                              {new Date(booking.startTime).toLocaleDateString()} • {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                            booking.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                            booking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {booking.status}
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
