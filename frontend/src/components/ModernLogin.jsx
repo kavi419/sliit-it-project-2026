@@ -198,7 +198,7 @@ const ModernLogin = () => {
     if (!email.trim()) { setError('Please enter your email address.'); return; }
     setLoading(true); setError('');
     try {
-      const { data: exists } = await axios.post('http://localhost:8080/api/auth/check-email', { email: email.trim().toLowerCase() });
+      const { data: exists } = await axios.post('/api/auth/check-email', { email: email.trim().toLowerCase() });
       goTo(exists ? STEP_SIGNIN : STEP_SIGNUP);
     } catch { setError('Could not reach the server. Please try again.'); }
     finally { setLoading(false); }
@@ -209,7 +209,7 @@ const ModernLogin = () => {
     if (!password.trim()) { setError('Please enter your password.'); return; }
     setLoading(true); setError('');
     try {
-      const { data } = await axios.post('http://localhost:8080/api/auth/login', { email: email.trim().toLowerCase(), password });
+      const { data } = await axios.post('/api/auth/login', { email: email.trim().toLowerCase(), password }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
       navigate(data.role === 'ADMIN' && data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Invalid email or password.'); }
@@ -222,7 +222,7 @@ const ModernLogin = () => {
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     setLoading(true); setError('');
     try {
-      const { data } = await axios.post('http://localhost:8080/api/auth/register', { email: email.trim().toLowerCase(), password, role });
+      const { data } = await axios.post('/api/auth/register', { email: email.trim().toLowerCase(), password, role }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
       navigate(data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Registration failed. Please try again.'); }

@@ -7,21 +7,25 @@ import com.smartcampus.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Controller for resource booking operations.
+ * Controller for resource booking operations implementing Module B requirements.
  */
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class BookingController {
     private static final Logger logger = LoggerFactory.getLogger(BookingController.class);
 
@@ -29,139 +33,148 @@ public class BookingController {
     private final UserRepository userRepository;
 
     /**
-     * Create a new booking for the authenticated user.
+     * Helper to get authenticated user email.
+     */
+    private String getAuthEmail() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return null;
+        }
+        if (auth.getPrincipal() instanceof OAuth2User oauth2User) {
+            return oauth2User.getAttribute("email");
+        }
+        return auth.getName();
+    }
+
+    /**
+     * Create a new booking request.
+     * Prevents overlapping approved bookings.
      */
     @PostMapping
-    public ResponseEntity<?> createBooking(
-            @AuthenticationPrincipal OAuth2User oauth2User,
-            @RequestBody Map<String, String> payload) {
-        
+    public ResponseEntity<?> createBooking(@RequestBody Map<String, Object> payload) {
+        String email = getAuthEmail();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Login required.");
+
         try {
-            logger.info("createBooking: START - Resource: {}, Start: {}, End: {}", 
-                payload.get("resourceName"), payload.get("startTime"), payload.get("endTime"));
-
-            String email;
-            if (oauth2User != null) {
-                email = oauth2User.getAttribute("email");
-                logger.info("createBooking: Using OAuth2 email: {}", email);
-            } else {
-                org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-                if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-                    logger.warn("createBooking: User not authenticated (No SecurityContext). Using fallback user.");
-                    // FALLBACK: Use the first user in the DB if not authenticated (for testing)
-                    UserEntity fallbackUser = userRepository.findAll().stream().findFirst()
-                            .orElseThrow(() -> new RuntimeException("No users in database at all!"));
-                    email = fallbackUser.getEmail();
-                } else {
-                    email = auth.getName();
-                }
-                logger.info("createBooking: Using email: {}", email);
-            }
-
             UserEntity user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found in database: " + email));
-            logger.info("createBooking: Found user ID: {}", user.getId());
+                    .orElseThrow(() -> new RuntimeException("User not found: " + email));
 
-            String resourceName = payload.get("resourceName");
-            LocalDateTime startTime = LocalDateTime.parse(payload.get("startTime"));
-            LocalDateTime endTime = LocalDateTime.parse(payload.get("endTime"));
-            logger.info("createBooking: Parsed times successfully");
+            String resourceName = (String) payload.get("resourceName");
+            String purpose = (String) payload.get("purpose");
+            Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : 0;
+            LocalDateTime start = LocalDateTime.parse(payload.get("startTime").toString());
+            LocalDateTime end = LocalDateTime.parse(payload.get("endTime").toString());
+
+            // ── Conflict Detection ──
+            List<BookingEntity> conflicts = bookingRepository.findOverlappingBookings(resourceName, start, end);
+            if (!conflicts.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body("Conflict: This resource is already booked during the selected time.");
+            }
 
             BookingEntity booking = BookingEntity.builder()
                     .user(user)
                     .resourceName(resourceName)
-                    .startTime(startTime)
-                    .endTime(endTime)
+                    .purpose(purpose)
+                    .attendeesCount(attendees)
+                    .startTime(start)
+                    .endTime(end)
                     .status("PENDING")
                     .build();
 
-            logger.info("createBooking: Saving to database...");
-            BookingEntity saved = bookingRepository.save(booking);
-            logger.info("createBooking: SUCCESS - Booking ID: {}", saved.getId());
-            
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.status(HttpStatus.CREATED).body(bookingRepository.save(booking));
         } catch (Exception e) {
-            logger.error("createBooking: FAILED with exception: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body("Error creating booking: " + e.getMessage());
+            logger.error("Booking error: ", e);
+            return ResponseEntity.badRequest().body("Invalid booking data: " + e.getMessage());
         }
     }
 
     /**
-     * Get all bookings for the authenticated user.
+     * Users view their own bookings.
      */
     @GetMapping("/my")
-    public ResponseEntity<List<BookingEntity>> getMyBookings(
-            @AuthenticationPrincipal OAuth2User oauth2User) {
-        
-        String email;
-        if (oauth2User != null) {
-            email = oauth2User.getAttribute("email");
-        } else {
-            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-            if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-                logger.warn("getMyBookings: User not authenticated. Using fallback user.");
-                UserEntity fallbackUser = userRepository.findAll().stream().findFirst()
-                        .orElseThrow(() -> new RuntimeException("No users found"));
-                email = fallbackUser.getEmail();
-            } else {
-                email = auth.getName();
-            }
-        }
+    public ResponseEntity<?> getMyBookings() {
+        String email = getAuthEmail();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        logger.info("getMyBookings: finding bookings for {}", email);
-        UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found: " + email));
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) return ResponseEntity.notFound().build();
 
-        List<BookingEntity> bookings = bookingRepository.findByUser(user);
-        logger.info("getMyBookings: found {} bookings", bookings.size());
-        return ResponseEntity.ok(bookings);
+        return ResponseEntity.ok(bookingRepository.findByUser(user));
     }
 
     /**
-     * Update an existing booking.
+     * Admin: View all bookings (optionally filter by status).
      */
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateBooking(
-            @PathVariable Long id,
-            @AuthenticationPrincipal OAuth2User oauth2User,
-            @RequestBody Map<String, String> payload) {
-        
-        try {
-            BookingEntity booking = bookingRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("Booking not found with id: " + id));
-
-            // In a real app, verify ownership here...
-            
-            if (payload.containsKey("startTime")) {
-                booking.setStartTime(LocalDateTime.parse(payload.get("startTime")));
-            }
-            if (payload.containsKey("endTime")) {
-                booking.setEndTime(LocalDateTime.parse(payload.get("endTime")));
-            }
-            
-            booking.setStatus("PENDING"); // Reset status on edit
-            return ResponseEntity.ok(bookingRepository.save(booking));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Update failed: " + e.getMessage());
+    @GetMapping
+    public ResponseEntity<?> getAllBookings(@RequestParam(required = false) String status) {
+        String email = getAuthEmail();
+        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        if (user == null || !"ADMIN".equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin access only.");
         }
+
+        List<BookingEntity> all = bookingRepository.findAll();
+        if (status != null && !status.isBlank()) {
+            all = all.stream().filter(b -> b.getStatus().equalsIgnoreCase(status)).toList();
+        }
+        return ResponseEntity.ok(all);
     }
 
     /**
-     * Delete a booking.
+     * Admin: Approve a booking.
      */
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<?> approveBooking(@PathVariable Long id, @RequestBody(required = false) Map<String, String> payload) {
+        String email = getAuthEmail();
+        UserEntity admin = userRepository.findByEmail(email).orElse(null);
+        if (admin == null || !"ADMIN".equals(admin.getRole())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        return bookingRepository.findById(id).map(b -> {
+            b.setStatus("APPROVED");
+            if (payload != null && payload.containsKey("reason")) b.setAdminReason(payload.get("reason"));
+            return ResponseEntity.ok(bookingRepository.save(b));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Admin: Reject a booking.
+     */
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<?> rejectBooking(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        String email = getAuthEmail();
+        UserEntity admin = userRepository.findByEmail(email).orElse(null);
+        if (admin == null || !"ADMIN".equals(admin.getRole())) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+
+        return bookingRepository.findById(id).map(b -> {
+            b.setStatus("REJECTED");
+            b.setAdminReason(payload.get("reason"));
+            return ResponseEntity.ok(bookingRepository.save(b));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * User: Cancel a booking (if PENDING or APPROVED).
+     */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
+        String email = getAuthEmail();
+        if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        return bookingRepository.findById(id).map(b -> {
+            if (!b.getUser().getEmail().equals(email)) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            if ("CANCELLED".equals(b.getStatus())) return ResponseEntity.badRequest().body("Already cancelled.");
+            
+            b.setStatus("CANCELLED");
+            return ResponseEntity.ok(bookingRepository.save(b));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteBooking(
-            @PathVariable Long id,
-            @AuthenticationPrincipal OAuth2User oauth2User) {
-        
-        try {
-            if (!bookingRepository.existsById(id)) {
-                return ResponseEntity.notFound().build();
-            }
-            bookingRepository.deleteById(id);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Deletion failed: " + e.getMessage());
-        }
+    public ResponseEntity<?> deleteBooking(@PathVariable Long id) {
+        // Keep supporting delete for basic cleanup if needed, but 'cancel' is the preferred workflow
+        if (!bookingRepository.existsById(id)) return ResponseEntity.notFound().build();
+        bookingRepository.deleteById(id);
+        return ResponseEntity.ok().build();
     }
 }

@@ -9,6 +9,8 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [attendees, setAttendees] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -20,6 +22,8 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
     try {
       const payload = {
         resourceName,
+        purpose,
+        attendees,
         startTime: `${date}T${startTime}:00`,
         endTime: `${date}T${endTime}:00`
       };
@@ -30,7 +34,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
       navigate('/bookings');
     } catch (err) {
       console.error('Booking failed:', err.response ? err.response.data : err.message);
-      setError('Failed to create booking. Please check your time slots.');
+      setError(err.response?.data || 'Failed to create booking. Please check for scheduling conflicts.');
     } finally {
       setLoading(false);
     }
@@ -54,7 +58,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg glass-card p-10 z-[101] shadow-2xl"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg glass-card p-10 z-[101] shadow-2xl maxHeight-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-8">
               <div>
@@ -107,7 +111,31 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-500 font-medium text-center">{error}</p>}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Purpose</label>
+                <textarea
+                  required
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g. Group study session, project development"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Expected Attendees</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  required
+                  value={attendees}
+                  onChange={(e) => setAttendees(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                />
+              </div>
+
+              {error && <p className="text-sm text-red-500 font-medium text-center bg-red-50 p-3 rounded-xl">{error}</p>}
 
               <button
                 type="submit"
