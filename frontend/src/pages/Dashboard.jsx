@@ -4,6 +4,7 @@ import { User, Mail, Calendar, MapPin, Clock, ArrowRight, CheckCircle2, AlertCir
 import { motion, AnimatePresence } from 'framer-motion';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // ─── Resource Card ────────────────────────────────────────────────────────────
 const ResourceCard = ({ title, status, image, onBook }) => (
@@ -153,6 +154,7 @@ const UserManagementTab = () => {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
   const { user }                          = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab]         = useState('overview');
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen]     = useState(false);
@@ -247,7 +249,10 @@ const Dashboard = () => {
                   You have administrative access to manage campus resources and view all system-wide bookings.
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <button className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-sm hover:bg-indigo-700 transition">
+                  <button
+                    onClick={() => navigate('/resources')}
+                    className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-sm hover:bg-indigo-700 transition"
+                  >
                     Manage Resources
                   </button>
                   <button className="px-6 py-2.5 bg-white text-indigo-600 border border-indigo-200 font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">

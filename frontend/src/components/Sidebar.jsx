@@ -1,11 +1,6 @@
 import React from 'react';
- feature/sachini/incident-ticket
 import { NavLink } from 'react-router-dom';
-import { Home, Calendar, Layout, User, Settings, LogOut, Wrench } from 'lucide-react';
-
-import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Layout, User, Settings, LogOut } from 'lucide-react';
- feature/kavindu/auth-setup
+import { Home, Calendar, Layout, User, Settings, LogOut, Building2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -36,7 +31,8 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 );
 
 const Sidebar = () => {
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
 
   const handleLogout = async () => {
     await logout(); // clears sessionStorage + calls Spring /logout + redirects to /login
@@ -52,6 +48,7 @@ const Sidebar = () => {
 
       <nav className="mt-8 flex flex-col gap-1">
         <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
+        {isAdmin && <SidebarItem to="/resources" icon={Building2} label="Resources" />}
         <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
         <SidebarItem to="/profile"   icon={User}      label="Profile"    />
         <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
