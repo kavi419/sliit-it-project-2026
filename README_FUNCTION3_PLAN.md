@@ -4,7 +4,7 @@
 Resource & Facility Management module for Smart Campus Hub.
 
 ## Current Progress
-- Estimated completion: **92/100**
+- Estimated completion: **95/100**
 - Branch used: `feature/Shehan`
 - Latest completed areas:
   - Backend resource CRUD
@@ -44,11 +44,9 @@ Resource & Facility Management module for Smart Campus Hub.
 - Frontend build successful (`npm run build`)
 
 ## Remaining Work (To Reach 96+)
-1. Add documentation evidence for viva/report:
-   - Endpoint table
-   - Test evidence
-   - Member contribution note
-2. Add one or two extra negative tests (non-admin and invalid payload edge cases).
+1. Optional final hardening if time allows:
+  - pagination or sorting for `/api/resources`
+  - one more negative test for an invalid booking payload edge case
 
 ## Day-by-Day Plan
 

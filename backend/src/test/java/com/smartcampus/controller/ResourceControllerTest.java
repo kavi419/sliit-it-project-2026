@@ -111,6 +111,17 @@ class ResourceControllerTest {
         verify(resourceService).createResource(request);
     }
 
+        @Test
+        void updateResource_ShouldRejectNonAdminWhenUsingMockHeader() {
+                when(httpServletRequest.getHeader("X-Mock-Role")).thenReturn("USER");
+
+                RuntimeException ex = assertThrows(RuntimeException.class,
+                                () -> resourceController.updateResource(null, 1L, request));
+
+                assertEquals("Admin access required", ex.getMessage());
+                verify(resourceService, never()).updateResource(anyLong(), any());
+        }
+
     @Test
     void updateStatus_ShouldReturnOk() {
         when(httpServletRequest.getHeader("X-Mock-Role")).thenReturn("ADMIN");
