@@ -70,7 +70,7 @@ public class UserEntity {
      * columnDefinition includes DEFAULT 'ACTIVE' so that ddl-auto=update can
      * ALTER TABLE on existing rows without violating the NOT NULL constraint.
      */
-    @Column(nullable = false, length = 30, columnDefinition = "VARCHAR(30) DEFAULT 'ACTIVE'")
+    @Column(nullable = false, length = 30)
     @Builder.Default
     private String status = "ACTIVE";
 

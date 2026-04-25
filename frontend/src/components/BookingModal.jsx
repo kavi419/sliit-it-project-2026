@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Clock, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { X, Calendar, Clock, Loader2, ChevronDown, ShieldCheck } from 'lucide-react';
+import api from '../utils/axiosConfig';
 
-const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, bookingToEdit }) => {
+const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess, bookingToEdit }) => {
   const navigate = useNavigate();
+  const [resources, setResources] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [resourceError, setResourceError] = useState('');
+  const [resourceId, setResourceId] = useState('');
+  
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -14,23 +19,61 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  React.useEffect(() => {
-    if (bookingToEdit) {
-      const start = new Date(bookingToEdit.startTime);
-      const end = new Date(bookingToEdit.endTime);
-      setDate(start.toISOString().split('T')[0]);
-      setStartTime(start.toTimeString().split(' ')[0].substring(0, 5));
-      setEndTime(end.toTimeString().split(' ')[0].substring(0, 5));
-      setPurpose(bookingToEdit.purpose);
-      setAttendees(bookingToEdit.attendeesCount || 1);
-    } else {
-      setDate('');
-      setStartTime('');
-      setEndTime('');
-      setPurpose('');
-      setAttendees(1);
-    }
-  }, [bookingToEdit, isOpen]);
+  const activeResources = useMemo(() => resources.filter((resource) => resource.status === 'ACTIVE'), [resources]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchActiveResources = async () => {
+      setLoadingResources(true);
+      setResourceError('');
+
+      try {
+        const response = await api.get('/api/resources', { params: { status: 'ACTIVE' } });
+        const mapped = (response.data.content || response.data || []).map((resource) => ({
+          id: String(resource.id),
+          name: resource.name,
+          type: resource.type,
+          location: resource.location,
+          status: resource.status
+        }));
+
+        setResources(mapped);
+        
+        if (bookingToEdit) {
+          const start = new Date(bookingToEdit.startTime);
+          const end = new Date(bookingToEdit.endTime);
+          setDate(start.toISOString().split('T')[0]);
+          setStartTime(start.toTimeString().split(' ')[0].substring(0, 5));
+          setEndTime(end.toTimeString().split(' ')[0].substring(0, 5));
+          setPurpose(bookingToEdit.purpose || '');
+          setAttendees(bookingToEdit.attendeesCount || 1);
+          
+          // Try to match resource by name if ID isn't directly available in bookingToEdit
+          const matchingRes = mapped.find(r => r.name === bookingToEdit.resourceName);
+          if (matchingRes) setResourceId(matchingRes.id);
+        } else {
+          // Pre-select from selectedResource prop (passed from Dashboard or Resources page)
+          const preselectedId = selectedResource?.id ? String(selectedResource.id) : null;
+          const fallbackFirst = mapped[0]?.id || '';
+          setResourceId(preselectedId || fallbackFirst);
+          setDate('');
+          setStartTime('');
+          setEndTime('');
+          setPurpose('');
+          setAttendees(1);
+        }
+      } catch (err) {
+        setResources([]);
+        setResourceId('');
+        setResourceError(err?.response?.data?.message || 'Failed to load active resources.');
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchActiveResources();
+  }, [isOpen, selectedResource?.id, bookingToEdit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +82,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
 
     try {
       const payload = {
-        resourceName: bookingToEdit ? bookingToEdit.resourceName : resourceName,
+        resourceId,
         purpose,
         attendees,
         startTime: `${date}T${startTime}:00`,
@@ -47,27 +90,38 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
       };
 
       if (bookingToEdit) {
-        await axios.put(`/api/bookings/${bookingToEdit.id}`, payload, { withCredentials: true });
+        await api.put(`/api/bookings/${bookingToEdit.id}`, payload);
       } else {
-        await axios.post('/api/bookings', payload, { withCredentials: true });
+        await api.post('/api/bookings', payload);
       }
       
       onBookingSuccess();
       onClose();
       if (!bookingToEdit) navigate('/bookings');
     } catch (err) {
-      console.error('Booking failed:', err.response ? err.response.data : err.message);
-      setError(err.response?.data || 'Failed to process booking. Please check for scheduling conflicts.');
+      console.error('Booking failed:', err);
+      setError(err?.response?.data?.message || err?.response?.data || 'Failed to process booking. Please check for scheduling conflicts.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Derive the selected resource name for the title:
+  // 1. From loaded dropdown (most accurate after fetch)
+  // 2. From bookingToEdit.resourceName (for edit mode)
+  // 3. From selectedResource prop (passed from parent, object with .title or .name)
+  // 4. Fallback
+  const selectedResourceName =
+    activeResources.find((r) => r.id === resourceId)?.name ||
+    bookingToEdit?.resourceName ||
+    selectedResource?.title ||
+    selectedResource?.name ||
+    'a Resource';
+
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -76,7 +130,6 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
           />
 
-          {/* Modal Content */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -85,7 +138,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
           >
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">{bookingToEdit ? `Edit ${bookingToEdit.resourceName}` : `Book ${resourceName}`}</h3>
+                <h3 className="text-2xl font-bold text-slate-900">{bookingToEdit ? `Edit ${selectedResourceName}` : `Book ${selectedResourceName}`}</h3>
                 <p className="text-slate-500 text-sm mt-1">{bookingToEdit ? 'Modify your booking details.' : 'Select your preferred date and time slots.'}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
@@ -94,6 +147,39 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Resource
+                </label>
+                {loadingResources ? (
+                  <div className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading active resources...
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      required
+                      value={resourceId}
+                      onChange={(e) => setResourceId(e.target.value)}
+                      className="w-full appearance-none px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      disabled={activeResources.length === 0}
+                    >
+                      {activeResources.length === 0 ? (
+                        <option value="">No active resources available</option>
+                      ) : (
+                        activeResources.map((resource) => (
+                          <option key={resource.id} value={resource.id}>
+                            {resource.name} · {resource.type} · {resource.location}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                )}
+                {resourceError && <p className="text-sm text-red-500 font-medium mt-2">{resourceError}</p>}
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4" /> Date
@@ -162,7 +248,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, booking
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || loadingResources || activeResources.length === 0}
                 className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (bookingToEdit ? 'Save Changes' : 'Confirm Booking')}

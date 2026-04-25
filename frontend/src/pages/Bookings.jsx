@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Clock, MapPin, CheckCircle, Clock3, Trash2, Edit2, X, Loader2, Users, Info, Check, Ban, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BookingModal from '../components/BookingModal';
+import api from '../utils/axiosConfig';
 
 const Bookings = () => {
     const { user } = useAuth();
@@ -31,7 +31,7 @@ const Bookings = () => {
             const url = isAdmin 
                 ? `/api/bookings${filterStatus ? `?status=${filterStatus}` : ''}`
                 : '/api/bookings/my';
-            const response = await axios.get(url, { withCredentials: true });
+            const response = await api.get(url);
             setBookings(response.data);
         } catch (err) {
             console.error('Failed to fetch bookings:', err);
@@ -46,7 +46,7 @@ const Bookings = () => {
         try {
             const { booking, type, reason } = actionModal;
             const endpoint = `/api/bookings/${booking.id}/${type}`;
-            await axios.post(endpoint, { reason }, { withCredentials: true });
+            await api.post(endpoint, { reason });
             
             setActionModal({ isOpen: false, booking: null, type: '', reason: '' });
             fetchBookings();
@@ -60,7 +60,7 @@ const Bookings = () => {
     const handleCancel = async (id) => {
         if (!window.confirm('Are you sure you want to cancel this booking?')) return;
         try {
-            await axios.post(`/api/bookings/${id}/cancel`, {}, { withCredentials: true });
+            await api.post(`/api/bookings/${id}/cancel`, {});
             fetchBookings();
         } catch (err) {
             alert('Failed to cancel booking');
@@ -70,7 +70,7 @@ const Bookings = () => {
     const handleDelete = async (id) => {
         if (!window.confirm('Are you sure you want to delete this booking record permanently?')) return;
         try {
-            await axios.delete(`/api/bookings/${id}`, { withCredentials: true });
+            await api.delete(`/api/bookings/${id}`);
             fetchBookings();
         } catch (err) {
             alert('Failed to delete booking');
@@ -286,7 +286,7 @@ const Bookings = () => {
 
                                 <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-tighter">
                                     <Clock3 className="w-3 h-3" />
-                                    {new Date(booking.createdAt).toLocaleDateString()}
+                                    {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
                                 </div>
                             </div>
                         </motion.div>
