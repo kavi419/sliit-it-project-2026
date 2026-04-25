@@ -262,8 +262,8 @@ const Dashboard = () => {
         {activeTab === 'overview' ? (
           <motion.div key="overview" className="space-y-12">
 
-            {/* Admin panel */}
-            {isAdmin && (
+            {/* Admin or Student Panel */}
+            {isAdmin ? (
               <motion.section variants={sectionVariant}
                 className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 text-white shadow-xl shadow-indigo-500/20">
                 {/* Grid pattern */}
@@ -285,6 +285,50 @@ const Dashboard = () => {
                       className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition flex items-center gap-2">
                       <Users className="w-4 h-4" /> Manage Users
                     </button>
+                  </div>
+                </div>
+              </motion.section>
+            ) : (
+              <motion.section variants={sectionVariant}
+                className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 p-8 sm:p-10 text-white shadow-2xl shadow-indigo-500/25">
+                {/* Grid pattern */}
+                <div className="absolute inset-0 opacity-10"
+                  style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                
+                {/* Glowing orbs */}
+                <div className="absolute top-[-20%] right-[-10%] w-72 h-72 bg-white/20 rounded-full blur-[80px] pointer-events-none" />
+                <div className="absolute bottom-[-20%] left-[-10%] w-64 h-64 bg-cyan-400/20 rounded-full blur-[80px] pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                  <div>
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] font-bold uppercase tracking-widest mb-5 shadow-sm">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      Live Campus Status
+                    </div>
+                    <h3 className="text-3xl md:text-4xl font-black tracking-tight leading-tight mb-3 drop-shadow-sm">
+                      Ready for your next<br/>study session?
+                    </h3>
+                    <p className="text-indigo-100 font-medium text-sm max-w-sm leading-relaxed">
+                      Book a room, lab, or auditorium instantly. Your perfect study space is just a click away.
+                    </p>
+                    <button 
+                      onClick={() => navigate('/bookings')}
+                      className="mt-6 px-6 py-3 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-lg shadow-indigo-900/20 hover:bg-indigo-50 hover:scale-105 transition-all duration-300"
+                    >
+                      View My Schedule
+                    </button>
+                  </div>
+                  
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-2 gap-4 shrink-0">
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 text-center w-full md:w-32 shadow-xl">
+                        <p className="text-4xl font-black tracking-tight drop-shadow-md text-white">{recentBookings.length}</p>
+                        <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mt-1.5">Active<br/>Bookings</p>
+                     </div>
+                     <div className="bg-white/10 backdrop-blur-md rounded-2xl p-5 border border-white/20 text-center w-full md:w-32 shadow-xl">
+                        <p className="text-4xl font-black tracking-tight drop-shadow-md text-white">12</p>
+                        <p className="text-indigo-200 text-[10px] font-bold uppercase tracking-widest mt-1.5">Hours<br/>Logged</p>
+                     </div>
                   </div>
                 </div>
               </motion.section>
