@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +21,9 @@ import java.util.List;
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final com.smartcampus.repository.BookingRepository bookingRepository;
 
-    public List<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status) {
+    public Page<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status, Pageable pageable) {
         Specification<ResourceEntity> specification = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -56,7 +59,7 @@ public class ResourceService {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
-        return resourceRepository.findAll(specification).stream().map(this::toResponse).toList();
+        return resourceRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     public ResourceResponse getResource(Long id) {
@@ -106,6 +109,28 @@ public class ResourceService {
     }
 
     private ResourceResponse toResponse(ResourceEntity resource) {
+        java.time.LocalDateTime nextAvailable = null;
+        Double occupancyProgress = 0.0;
+        if (resource.getStatus() == ResourceStatus.ACTIVE) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            List<com.smartcampus.model.BookingEntity> overlaps = bookingRepository.findOverlappingBookings(
+                resource.getName(), now, now.plusSeconds(1)
+            );
+            if (!overlaps.isEmpty()) {
+                com.smartcampus.model.BookingEntity active = overlaps.get(0);
+                nextAvailable = overlaps.stream()
+                    .map(com.smartcampus.model.BookingEntity::getEndTime)
+                    .max(java.time.LocalDateTime::compareTo)
+                    .orElse(null);
+                
+                long total = java.time.Duration.between(active.getStartTime(), active.getEndTime()).toSeconds();
+                long elapsed = java.time.Duration.between(active.getStartTime(), now).toSeconds();
+                if (total > 0) {
+                    occupancyProgress = Math.min(100.0, Math.max(0.0, (elapsed * 100.0) / total));
+                }
+            }
+        }
+
         return new ResourceResponse(
                 resource.getId(),
                 resource.getName(),
@@ -118,7 +143,9 @@ public class ResourceService {
                 resource.getImageUrl(),
                 resource.getDescription(),
                 resource.getCreatedAt(),
-                resource.getUpdatedAt()
+                resource.getUpdatedAt(),
+                nextAvailable,
+                occupancyProgress
         );
     }
 

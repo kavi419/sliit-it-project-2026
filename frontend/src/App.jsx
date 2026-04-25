@@ -51,7 +51,7 @@ function App() {
           <Route path="/login" element={<ModernLogin />} />
           <Route path="/waiting" element={<WaitingPage />} />
 
-          {/* Protected routes */}
+          {/* Protected routes — all wrapped by MainLayout */}
           <Route
             element={
               <ProtectedRoute>

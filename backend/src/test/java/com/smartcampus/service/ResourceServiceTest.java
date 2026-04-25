@@ -13,6 +13,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -132,12 +135,12 @@ class ResourceServiceTest {
                 .status(ResourceStatus.ACTIVE)
                 .build();
 
-        when(resourceRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class)))
-                .thenReturn(List.of(entity));
+        when(resourceRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(entity)));
 
-        List<ResourceResponse> results = resourceService.searchResources("hall", null, null, null, null, null);
+        Page<ResourceResponse> results = resourceService.searchResources("hall", null, null, null, null, null, PageRequest.of(0, 10));
 
-        assertEquals(1, results.size());
-        assertEquals("Seminar Hall", results.get(0).name());
+        assertEquals(1, results.getContent().size());
+        assertEquals("Seminar Hall", results.getContent().get(0).name());
     }
 }
