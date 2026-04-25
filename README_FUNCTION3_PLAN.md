@@ -4,7 +4,7 @@
 Resource & Facility Management module for Smart Campus Hub.
 
 ## Current Progress
-- Estimated completion: **88/100**
+- Estimated completion: **92/100**
 - Branch used: `feature/Shehan`
 - Latest completed areas:
   - Backend resource CRUD
@@ -13,6 +13,8 @@ Resource & Facility Management module for Smart Campus Hub.
   - Admin resources UI page
   - Route + sidebar + dashboard navigation integration
   - Unit tests for resource service and controller
+  - Booking form now pulls active resources from the API
+  - Booking endpoint now validates ACTIVE resource selection
 
 ## What Is Already Done
 ### Backend
@@ -37,17 +39,16 @@ Resource & Facility Management module for Smart Campus Hub.
 ### Testing
 - `ResourceServiceTest`
 - `ResourceControllerTest`
+- `BookingControllerTest`
 - Backend test run successful (`mvn test`)
 - Frontend build successful (`npm run build`)
 
 ## Remaining Work (To Reach 96+)
-1. Replace hardcoded dashboard resource cards with API-driven data.
-2. Connect booking resource source to Resource API (single source of truth).
-3. Add documentation evidence for viva/report:
+1. Add documentation evidence for viva/report:
    - Endpoint table
    - Test evidence
    - Member contribution note
-4. Add one or two extra negative tests (non-admin and invalid payload edge cases).
+2. Add one or two extra negative tests (non-admin and invalid payload edge cases).
 
 ## Day-by-Day Plan
 
@@ -69,6 +70,9 @@ Resource & Facility Management module for Smart Campus Hub.
 ### Tasks
 - Ensure booking form resource selection uses Resource API data.
 - Restrict booking options to ACTIVE resources only.
+
+### Status
+- Done
 
 ### Target Commits
 - `feat: connect booking resource picker to api`

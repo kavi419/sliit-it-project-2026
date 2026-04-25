@@ -1,14 +1,60 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar, Clock, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { X, Calendar, Clock, Loader2, ChevronDown, ShieldCheck } from 'lucide-react';
+import api from '../utils/axiosConfig';
 
-const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
+const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess }) => {
+  const [resources, setResources] = useState([]);
+  const [loadingResources, setLoadingResources] = useState(false);
+  const [resourceError, setResourceError] = useState('');
+  const [resourceId, setResourceId] = useState('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const activeResources = useMemo(() => resources.filter((resource) => resource.status === 'ACTIVE'), [resources]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const fetchActiveResources = async () => {
+      setLoadingResources(true);
+      setResourceError('');
+
+      try {
+        const response = await api.get('/api/resources', { params: { status: 'ACTIVE' } });
+        const mapped = (response.data || []).map((resource) => ({
+          id: String(resource.id),
+          name: resource.name,
+          type: resource.type,
+          location: resource.location,
+          status: resource.status
+        }));
+
+        setResources(mapped);
+        const initialId = selectedResource?.id ? String(selectedResource.id) : mapped[0]?.id || '';
+        setResourceId(initialId);
+      } catch (err) {
+        setResources([]);
+        setResourceId('');
+        setResourceError(err?.response?.data?.message || 'Failed to load active resources.');
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchActiveResources();
+  }, [isOpen, selectedResource?.id]);
+
+  useEffect(() => {
+    if (!resourceId && activeResources.length > 0) {
+      setResourceId(activeResources[0].id);
+    }
+  }, [activeResources, resourceId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,21 +63,23 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
 
     try {
       const payload = {
-        resourceName,
+        resourceId,
         startTime: `${date}T${startTime}:00`,
         endTime: `${date}T${endTime}:00`
       };
 
-      await axios.post('/api/bookings', payload);
+      await api.post('/api/bookings', payload);
       onBookingSuccess();
       onClose();
     } catch (err) {
       console.error('Booking failed:', err);
-      setError('Failed to create booking. Please check your time slots.');
+      setError(err?.response?.data?.message || 'Failed to create booking. Please check your time slots.');
     } finally {
       setLoading(false);
     }
   };
+
+  const selectedResourceName = activeResources.find((resource) => resource.id === resourceId)?.name || selectedResource?.title || 'Selected Resource';
 
   return (
     <AnimatePresence>
@@ -55,7 +103,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
           >
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">Book {resourceName}</h3>
+                <h3 className="text-2xl font-bold text-slate-900">Book {selectedResourceName}</h3>
                 <p className="text-slate-500 text-sm mt-1">Select your preferred date and time slots.</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
@@ -64,6 +112,39 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4" /> Resource
+                </label>
+                {loadingResources ? (
+                  <div className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading active resources...
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <select
+                      required
+                      value={resourceId}
+                      onChange={(e) => setResourceId(e.target.value)}
+                      className="w-full appearance-none px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      disabled={activeResources.length === 0}
+                    >
+                      {activeResources.length === 0 ? (
+                        <option value="">No active resources available</option>
+                      ) : (
+                        activeResources.map((resource) => (
+                          <option key={resource.id} value={resource.id}>
+                            {resource.name} · {resource.type} · {resource.location}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                )}
+                {resourceError && <p className="text-sm text-red-500 font-medium mt-2">{resourceError}</p>}
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
                   <Calendar className="w-4 h-4" /> Date
@@ -108,7 +189,7 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || loadingResources || activeResources.length === 0}
                 className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
               >
                 {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Booking'}

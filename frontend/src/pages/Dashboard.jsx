@@ -8,32 +8,33 @@ import { useNavigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
 
 // ─── Resource Card ────────────────────────────────────────────────────────────
-const ResourceCard = ({ title, status, image, location, capacity, onBook }) => (
+const ResourceCard = ({ resource, onBook }) => (
   <div className="glass-card overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
     <div className="h-48 w-full bg-slate-200 relative overflow-hidden">
       <div className="absolute inset-0 bg-indigo-600/10 group-hover:bg-indigo-600/0 transition-colors duration-500" />
-      <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+      <img src={resource.image} alt={resource.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
       <div className="absolute top-4 right-4">
         <span className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1.5 ${
-          status === 'Available' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
+          resource.status === 'Available' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'
         }`}>
-          {status === 'Available' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-          {status}
+          {resource.status === 'Available' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+          {resource.status}
         </span>
       </div>
     </div>
     <div className="p-6">
-      <h3 className="text-xl font-bold text-slate-800 tracking-tight">{title}</h3>
+      <h3 className="text-xl font-bold text-slate-800 tracking-tight">{resource.title}</h3>
       <div className="flex items-center gap-4 mt-4 text-sm text-slate-500 font-medium">
-        <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{location || 'Campus'}</span>
-        <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{capacity ? `${capacity} Pax` : 'N/A'}</span>
+        <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{resource.location || 'Campus'}</span>
+        <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{resource.capacity ? `${resource.capacity} Pax` : 'N/A'}</span>
       </div>
       <button
-        onClick={() => onBook(title)}
+        onClick={() => onBook(resource)}
+        disabled={resource.status !== 'Available'}
         className="w-full mt-6 py-3 bg-white border border-indigo-100 text-indigo-600 font-bold rounded-xl
-          hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm"
+          hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-indigo-600"
       >
-        Book Now
+        {resource.status === 'Available' ? 'Book Now' : 'Unavailable'}
       </button>
     </div>
   </div>
@@ -194,6 +195,7 @@ const Dashboard = () => {
       try {
         const res = await api.get('/api/resources');
         const mapped = (res.data || []).map((resource, idx) => ({
+          id: resource.id,
           title: resource.name,
           status: statusLabelMap[resource.status] || 'Occupied',
           image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
@@ -334,8 +336,8 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {!loadingResources && !resourcesError && resources.map((res, idx) => (
-                  <ResourceCard key={idx} {...res} onBook={(name) => { setSelectedResource(name); setIsModalOpen(true); }} />
+                {!loadingResources && !resourcesError && resources.map((res) => (
+                  <ResourceCard key={res.id || res.title} resource={res} onBook={(resource) => { setSelectedResource(resource); setIsModalOpen(true); }} />
                 ))}
               </div>
             </section>
@@ -387,7 +389,7 @@ const Dashboard = () => {
       <BookingModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        resourceName={selectedResource}
+        selectedResource={selectedResource}
         onBookingSuccess={() => alert('Booking created successfully!')}
       />
     </div>
