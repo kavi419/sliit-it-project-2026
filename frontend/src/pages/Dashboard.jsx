@@ -4,6 +4,7 @@ import { User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, Sh
 import { motion, AnimatePresence } from 'framer-motion';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 // Shared animation variant for staggered section reveal
 const sectionVariant = {
@@ -161,8 +162,9 @@ const UserManagementTab = () => {
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 const Dashboard = () => {
-  const { user }                              = useAuth();
-  const [activeTab, setActiveTab]             = useState('overview');
+  const { user }                          = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab]         = useState('overview');
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen]         = useState(false);
   const [dateStr, setDateStr]                 = useState('');
@@ -258,7 +260,7 @@ const Dashboard = () => {
                     You have full administrative access to manage campus resources, approve pending users, and view system-wide booking activity.
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    <button className="px-5 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">Manage Resources</button>
+                    <button onClick={() => navigate('/resources')} className="px-5 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">Manage Resources</button>
                     <button className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition">View All Bookings</button>
                     <button
                       onClick={() => setActiveTab('users')}

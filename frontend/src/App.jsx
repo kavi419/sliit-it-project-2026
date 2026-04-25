@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
+import Resources from './pages/Resources';
+import TicketsMain from './pages/Tickets/TicketsMain';
 import ModernLogin from './components/ModernLogin';
 import WaitingPage from './pages/WaitingPage';
 
@@ -11,7 +13,7 @@ import WaitingPage from './pages/WaitingPage';
  *
  * Rules:
  *  - No user in session  → redirect to /login
- *  - PENDING_ADMIN        → redirect to /waiting (blocked until approved)
+ *  - PENDING_ADMIN       → redirect to /waiting
  *  - Otherwise           → render children normally
  */
 const ProtectedRoute = ({ children }) => {
@@ -25,13 +27,11 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  // No session — send to login
-  // (Commented out for now so existing Google OAuth flow still works without
-  //  a sessionStorage entry. Uncomment once full session management is wired.)
-  // if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
-  // PENDING_ADMIN cannot access the dashboard at all
-  if (user && user.status === 'PENDING_ADMIN') {
+  if (user.status === 'PENDING_ADMIN') {
     return <Navigate to="/waiting" replace />;
   }
 
@@ -40,33 +40,43 @@ const ProtectedRoute = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
+    <AuthProvider>
+      <Router>
         <Routes>
-          {/* Default → dashboard */}
+          {/* Default route */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Public routes */}
-          <Route path="/login"   element={<ModernLogin />} />
+          <Route path="/login" element={<ModernLogin />} />
           <Route path="/waiting" element={<WaitingPage />} />
 
-          {/* Protected app layout */}
-          <Route element={<MainLayout />}>
+          {/* Protected routes */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <MainLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/tickets/*" element={<TicketsMain />} />
             <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
+              path="/bookings"
+              element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>}
             />
-            <Route path="/bookings" element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>} />
-            <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
-            <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
+            <Route
+              path="/profile"
+              element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>}
+            />
+            <Route
+              path="/settings"
+              element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>}
+            />
           </Route>
         </Routes>
-      </AuthProvider>
-    </Router>
+      </Router>
+    </AuthProvider>
   );
 }
 

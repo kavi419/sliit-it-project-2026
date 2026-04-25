@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Layout, User, Settings, LogOut, Zap } from 'lucide-react';
+import { Home, Calendar, Layout, User, Settings, LogOut, Zap, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
@@ -48,8 +48,12 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 );
 
 const Sidebar = () => {
-  const { logout, user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
+
+  const handleLogout = async () => {
+    await logout(); // clears sessionStorage + calls Spring /logout + redirects to /login
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-64 z-50 flex flex-col
@@ -77,9 +81,11 @@ const Sidebar = () => {
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 flex-1 overflow-y-auto pb-4">
-        {NAV_ITEMS.map((item) => (
-          <SidebarItem key={item.to} {...item} />
-        ))}
+        <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
+        {isAdmin && <SidebarItem to="/resources" icon={Building2} label="Resources" />}
+        <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
+        <SidebarItem to="/profile"   icon={User}      label="Profile"    />
+        <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
       </nav>
 
       {/* User card + logout */}
