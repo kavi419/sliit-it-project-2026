@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/axiosConfig';
 
 // ─── Resource Card ────────────────────────────────────────────────────────────
-const ResourceCard = ({ title, status, image, onBook }) => (
+const ResourceCard = ({ title, status, image, location, capacity, onBook }) => (
   <div className="glass-card overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
     <div className="h-48 w-full bg-slate-200 relative overflow-hidden">
       <div className="absolute inset-0 bg-indigo-600/10 group-hover:bg-indigo-600/0 transition-colors duration-500" />
@@ -24,8 +25,8 @@ const ResourceCard = ({ title, status, image, onBook }) => (
     <div className="p-6">
       <h3 className="text-xl font-bold text-slate-800 tracking-tight">{title}</h3>
       <div className="flex items-center gap-4 mt-4 text-sm text-slate-500 font-medium">
-        <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />Main Campus</span>
-        <span className="flex items-center gap-1.5"><User className="w-4 h-4" />20-50 Pax</span>
+        <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{location || 'Campus'}</span>
+        <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{capacity ? `${capacity} Pax` : 'N/A'}</span>
       </div>
       <button
         onClick={() => onBook(title)}
@@ -159,6 +160,9 @@ const Dashboard = () => {
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen]     = useState(false);
   const [dateStr, setDateStr]             = useState('');
+  const [resources, setResources]         = useState([]);
+  const [loadingResources, setLoadingResources] = useState(true);
+  const [resourcesError, setResourcesError] = useState('');
 
   const displayName = user?.name || 'Campus User';
   const role        = user?.role || 'STUDENT';
@@ -169,12 +173,45 @@ const Dashboard = () => {
     setDateStr(new Date().toLocaleDateString('en-US', options));
   }, []);
 
-  const resources = [
-    { title: 'IoT Lab',       status: 'Available', image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800' },
-    { title: 'Study Room 01', status: 'Available', image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800' },
-    { title: 'Auditorium',    status: 'Occupied',  image: 'https://images.unsplash.com/photo-1505373633560-eb0a6f2a5100?auto=format&fit=crop&q=80&w=800' },
-    { title: 'Library Zone B',status: 'Available', image: 'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=800' },
-  ];
+  useEffect(() => {
+    const statusLabelMap = {
+      ACTIVE: 'Available',
+      MAINTENANCE: 'Occupied',
+      OUT_OF_SERVICE: 'Occupied'
+    };
+
+    const fallbackImages = [
+      'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1505373633560-eb0a6f2a5100?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&q=80&w=800'
+    ];
+
+    const fetchResources = async () => {
+      setLoadingResources(true);
+      setResourcesError('');
+
+      try {
+        const res = await api.get('/api/resources');
+        const mapped = (res.data || []).map((resource, idx) => ({
+          title: resource.name,
+          status: statusLabelMap[resource.status] || 'Occupied',
+          image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
+          location: resource.location,
+          capacity: resource.capacity
+        }));
+
+        setResources(mapped);
+      } catch (err) {
+        setResourcesError(err?.response?.data?.message || 'Unable to load resources right now.');
+        setResources([]);
+      } finally {
+        setLoadingResources(false);
+      }
+    };
+
+    fetchResources();
+  }, []);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
@@ -279,7 +316,25 @@ const Dashboard = () => {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {resources.map((res, idx) => (
+                {loadingResources && (
+                  <div className="md:col-span-2 lg:col-span-4 py-12 text-center text-slate-500 font-medium">
+                    Loading resources...
+                  </div>
+                )}
+
+                {!loadingResources && resourcesError && (
+                  <div className="md:col-span-2 lg:col-span-4 py-6 px-5 rounded-2xl border border-rose-200 bg-rose-50 text-rose-700 font-medium">
+                    {resourcesError}
+                  </div>
+                )}
+
+                {!loadingResources && !resourcesError && resources.length === 0 && (
+                  <div className="md:col-span-2 lg:col-span-4 py-12 text-center text-slate-500 font-medium">
+                    No resources available.
+                  </div>
+                )}
+
+                {!loadingResources && !resourcesError && resources.map((res, idx) => (
                   <ResourceCard key={idx} {...res} onBook={(name) => { setSelectedResource(name); setIsModalOpen(true); }} />
                 ))}
               </div>
