@@ -4,10 +4,15 @@ import axios from 'axios';
 /**
  * Global authentication context.
  *
- * Stored in sessionStorage so a page refresh survives without a server round-trip,
- * but the session is cleared when the browser tab closes.
+ * Stored in sessionStorage so refreshing the page restores state instantly
+ * without a server round-trip. The session clears on explicit logout.
  *
- * Shape: { email, name, role, status }  |  null (unauthenticated)
+ * User shape: { email, name, role, status }  |  null (unauthenticated)
+ *
+ * Hydration order:
+ *  1. sessionStorage hit  → instant, no network call
+ *  2. GET /api/user/me    → works for Google OAuth (Spring session cookie) AND
+ *                           email/password (pass ?email= param)
  */
 const AuthContext = createContext(null);
 
@@ -20,20 +25,47 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // ── Try to resolve the logged-in user on mount ──────────────────────────────
-  // Works for Google OAuth sessions (cookie-based) AND email/password sessions
-  // that stored the user in sessionStorage.
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
+
     if (stored) {
-      try { setUser(JSON.parse(stored)); }
-      catch { sessionStorage.removeItem(SESSION_KEY); }
-      setLoading(false);
-      return;
+      try {
+        const parsed = JSON.parse(stored);
+        setUser(parsed);
+
+        // ── Background role sync ─────────────────────────────────────────────
+        // Even if we have a cached session, re-fetch the role from the DB so
+        // that admin approvals or role changes are reflected immediately on
+        // the next page load — without requiring the user to log out and back in.
+        const url = parsed.email
+          ? `/api/user/me?email=${encodeURIComponent(parsed.email)}`
+          : '/api/user/me';
+
+        axios.get(url, { withCredentials: true })
+          .then(res => {
+            const fresh = {
+              email:  res.data.email  || parsed.email,
+              name:   res.data.name   || parsed.name || 'Campus User',
+              role:   res.data.role   || 'STUDENT',
+              status: res.data.status || 'ACTIVE',
+            };
+            // Only update if something actually changed (avoids unnecessary re-renders)
+            if (fresh.role !== parsed.role || fresh.status !== parsed.status) {
+              sessionStorage.setItem(SESSION_KEY, JSON.stringify(fresh));
+              setUser(fresh);
+            }
+          })
+          .catch(() => { /* silent — cached data is good enough */ })
+          .finally(() => setLoading(false));
+
+        return; // don't fall through to the unauthenticated fetch below
+      } catch {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
     }
 
-    // Attempt to fetch the OAuth2 user from the backend (cookie session)
-    axios.get('/api/dashboard', { withCredentials: true })
+    // ── No cached session: try Google OAuth cookie ──────────────────────────
+    axios.get('/api/user/me', { withCredentials: true })
       .then(res => {
         const u = {
           email:  res.data.email  || '',
@@ -45,12 +77,12 @@ export const AuthProvider = ({ children }) => {
         setUser(u);
       })
       .catch(() => {
-        // Not logged in — leave user as null
+        // Not logged in — leave user as null, ProtectedRoute will handle it
       })
       .finally(() => setLoading(false));
   }, []);
 
-  // ── Persist on every change ─────────────────────────────────────────────────
+  // ── Persist helper ──────────────────────────────────────────────────────────
   const saveUser = useCallback((u) => {
     if (u) sessionStorage.setItem(SESSION_KEY, JSON.stringify(u));
     else    sessionStorage.removeItem(SESSION_KEY);
@@ -58,8 +90,27 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // ── Login (called after successful email/password auth) ─────────────────────
+  // Immediately stores the server-returned role/status, then does a background
+  // re-fetch from /api/user/me to ensure the role is the DB source of truth.
   const login = useCallback((userData) => {
     saveUser(userData);
+
+    // Background DB sync — resolve the real role immediately after login
+    const url = userData.email
+      ? `/api/user/me?email=${encodeURIComponent(userData.email)}`
+      : '/api/user/me';
+
+    axios.get(url, { withCredentials: true })
+      .then(res => {
+        const fresh = {
+          email:  res.data.email  || userData.email,
+          name:   res.data.name   || userData.name,
+          role:   res.data.role   || userData.role,
+          status: res.data.status || userData.status,
+        };
+        saveUser(fresh);
+      })
+      .catch(() => { /* use the data from the login response */ });
   }, [saveUser]);
 
   // ── Logout ──────────────────────────────────────────────────────────────────
@@ -67,10 +118,9 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
     try {
-      // Invalidate server-side session (Google OAuth) then redirect to login
       await axios.post('/logout', {}, { withCredentials: true });
     } catch {
-      // ignore — Spring logout may redirect, which axios treats as an error
+      // Spring logout sends a redirect which axios treats as an error — ignore
     } finally {
       window.location.href = '/login';
     }

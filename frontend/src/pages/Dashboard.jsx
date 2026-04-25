@@ -1,15 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Mail, Calendar, MapPin, Clock, ArrowRight, CheckCircle2, AlertCircle, Shield, Users, Check } from 'lucide-react';
+import { User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, Shield, Users, Check, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
+
+// Shared animation variant for staggered section reveal
+const sectionVariant = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] } },
+};
 
 // ─── Resource Card ────────────────────────────────────────────────────────────
 const ResourceCard = ({ resource, onBook }) => (
-  <div className="glass-card overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
+  <motion.div
+    variants={sectionVariant}
+    className="glass-card overflow-hidden group hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+  >
     <div className="h-48 w-full bg-slate-200 relative overflow-hidden">
       <div className="absolute inset-0 bg-indigo-600/10 group-hover:bg-indigo-600/0 transition-colors duration-500" />
       <img src={resource.image} alt={resource.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
@@ -37,7 +46,7 @@ const ResourceCard = ({ resource, onBook }) => (
         {resource.status === 'Available' ? 'Book Now' : 'Unavailable'}
       </button>
     </div>
-  </div>
+  </motion.div>
 );
 
 // ─── User Management Tab ──────────────────────────────────────────────────────
@@ -49,7 +58,7 @@ const UserManagementTab = () => {
 
   const fetchPending = () => {
     setLoadingUsers(true);
-    axios.get('http://localhost:8080/api/admin/pending-users', { withCredentials: true })
+    api.get('/api/admin/pending-users')
       .then(res => setPendingUsers(res.data))
       .catch(() => setPendingUsers([]))
       .finally(() => setLoadingUsers(false));
@@ -60,7 +69,7 @@ const UserManagementTab = () => {
   const handleApprove = async (id, email) => {
     setApprovingId(id);
     try {
-      await axios.post(`http://localhost:8080/api/admin/approve/${id}`, {}, { withCredentials: true });
+      await api.post(`/api/admin/approve/${id}`, {});
       setToast(`✅ ${email} approved as Admin!`);
       setPendingUsers(prev => prev.filter(u => u.id !== id));
       setTimeout(() => setToast(''), 4000);
@@ -74,7 +83,6 @@ const UserManagementTab = () => {
 
   return (
     <section className="space-y-6">
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -164,6 +172,8 @@ const Dashboard = () => {
   const [resources, setResources]         = useState([]);
   const [loadingResources, setLoadingResources] = useState(true);
   const [resourcesError, setResourcesError] = useState('');
+  const [bookings, setBookings]           = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
 
   const displayName = user?.name || 'Campus User';
   const role        = user?.role || 'STUDENT';
@@ -177,8 +187,8 @@ const Dashboard = () => {
   useEffect(() => {
     const statusLabelMap = {
       ACTIVE: 'Available',
-      MAINTENANCE: 'Occupied',
-      OUT_OF_SERVICE: 'Occupied'
+      MAINTENANCE: 'Maintenance',
+      OUT_OF_SERVICE: 'Out of Service'
     };
 
     const fallbackImages = [
@@ -194,10 +204,10 @@ const Dashboard = () => {
 
       try {
         const res = await api.get('/api/resources');
-        const mapped = (res.data || []).map((resource, idx) => ({
+        const mapped = (res.data.content || []).map((resource, idx) => ({
           id: resource.id,
           title: resource.name,
-          status: statusLabelMap[resource.status] || 'Occupied',
+          status: statusLabelMap[resource.status] || 'Unavailable',
           image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
           location: resource.location,
           capacity: resource.capacity
@@ -212,109 +222,116 @@ const Dashboard = () => {
       }
     };
 
+    const fetchBookings = async () => {
+      setLoadingBookings(true);
+      try {
+        const res = await api.get('/api/bookings/my');
+        setBookings(res.data || []);
+      } catch (err) {
+        console.error('Failed to load bookings:', err);
+      } finally {
+        setLoadingBookings(false);
+      }
+    };
+
     fetchResources();
+    fetchBookings();
   }, []);
 
-  const tabs = [
-    { id: 'overview', label: 'Overview' },
-    ...(isAdmin ? [{ id: 'users', label: '👥 User Management' }] : []),
-  ];
+  const staggerContainer = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } }
+  };
 
   return (
-    <div className="space-y-10">
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="space-y-8"
+    >
       {/* ── Header ── */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <motion.header variants={sectionVariant} className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">
+          <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1">Good morning ☀</p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">
             Welcome back, {displayName.split(' ')[0]}!
           </h2>
-          <p className="text-slate-500 mt-2 font-medium flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-500" /> {dateStr}
+          <p className="text-slate-500 mt-1.5 font-medium flex items-center gap-2 text-sm">
+            <Calendar className="w-3.5 h-3.5 text-indigo-400" /> {dateStr}
           </p>
         </div>
-        <div className="flex items-center gap-3 bg-white/50 border border-indigo-100 p-2 pr-6 rounded-2xl shadow-sm glass">
-          <div className={`h-12 w-12 rounded-xl flex items-center justify-center text-white
-            ${isAdmin ? 'bg-rose-600' : 'bg-indigo-600'}`}>
-            <User className="w-6 h-6" />
+        <div className="flex items-center gap-3 bg-white/70 border border-slate-200/80 p-2 pr-5 rounded-2xl shadow-sm">
+          <div className={`h-11 w-11 rounded-xl flex items-center justify-center text-white text-sm font-black shadow-md
+            ${isAdmin ? 'bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-500/30' : 'bg-gradient-to-br from-indigo-50 to-violet-600 shadow-indigo-500/30'}`}>
+            {displayName[0]?.toUpperCase()}
           </div>
           <div>
             <p className="text-sm font-bold text-slate-800">{displayName}</p>
-            <p className={`text-xs font-semibold uppercase tracking-widest ${isAdmin ? 'text-rose-600' : 'text-indigo-600'}`}>
-              {role}
-            </p>
+            <p className={`text-[11px] font-bold uppercase tracking-widest ${isAdmin ? 'text-rose-600' : 'text-indigo-500'}`}>{role}</p>
           </div>
         </div>
-      </header>
+      </motion.header>
 
-      {/* ── Tab Navigation (admin only) ── */}
+      {/* ── Tab bar (admin only) ── */}
       {isAdmin && (
-        <div className="flex gap-2 border-b border-slate-200 pb-0">
-          {tabs.map(tab => (
+        <motion.div variants={sectionVariant} className="flex gap-1.5 bg-slate-100/80 p-1 rounded-2xl w-fit">
+          {[{ id: 'overview', label: 'Overview' }, { id: 'users', label: '👥 User Management' }].map(tab => (
             <button
               key={tab.id}
               id={`tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-5 py-2.5 font-semibold text-sm rounded-t-xl border-b-2 transition-all
+              className={`px-5 py-2 font-semibold text-sm rounded-xl transition-all duration-200
                 ${activeTab === tab.id
-                  ? 'border-indigo-600 text-indigo-700 bg-indigo-50/60'
-                  : 'border-transparent text-slate-500 hover:text-indigo-600'}`}
+                  ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80'
+                  : 'text-slate-500 hover:text-slate-700'}`}
             >
               {tab.label}
             </button>
           ))}
-        </div>
+        </motion.div>
       )}
 
       {/* ── Tab Content ── */}
       <AnimatePresence mode="wait">
-        {activeTab === 'users' ? (
-          <motion.div key="users" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            <UserManagementTab />
-          </motion.div>
-        ) : (
-          <motion.div key="overview" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="space-y-12">
+        {activeTab === 'overview' ? (
+          <motion.div key="overview" className="space-y-12">
 
-            {/* Admin overview panel */}
+            {/* Admin panel */}
             {isAdmin && (
-              <section className="bg-indigo-50 border border-indigo-100 rounded-2xl p-8 shadow-sm">
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="p-2 bg-indigo-600 text-white rounded-xl shadow-sm">
-                    <Shield className="w-5 h-5" />
-                  </span>
-                  <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Admin Panel</h3>
+              <motion.section variants={sectionVariant}
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-700 p-8 text-white shadow-xl shadow-indigo-500/20">
+                <div className="absolute inset-0 opacity-10"
+                  style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Shield className="w-5 h-5 text-indigo-200" />
+                    <h3 className="text-xl font-extrabold tracking-tight">Admin Panel</h3>
+                  </div>
+                  <p className="text-indigo-200 font-medium text-sm mb-6 max-w-lg">
+                    You have full administrative access to manage campus resources, approve pending users, and view system-wide booking activity.
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button onClick={() => navigate('/resources')} className="px-5 py-2.5 bg-white text-indigo-700 text-sm font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">Manage Resources</button>
+                    <button onClick={() => navigate('/bookings')} className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition">View All Bookings</button>
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className="px-5 py-2.5 bg-white/20 text-white border border-white/30 text-sm font-bold rounded-xl hover:bg-white/30 transition flex items-center gap-2">
+                      <Users className="w-4 h-4" /> Manage Users
+                    </button>
+                  </div>
                 </div>
-                <p className="text-indigo-900/70 font-medium mb-6">
-                  You have administrative access to manage campus resources and view all system-wide bookings.
-                </p>
-                <div className="flex flex-wrap gap-4">
-                  <button
-                    onClick={() => navigate('/resources')}
-                    className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl shadow-sm hover:bg-indigo-700 transition"
-                  >
-                    Manage Resources
-                  </button>
-                  <button className="px-6 py-2.5 bg-white text-indigo-600 border border-indigo-200 font-bold rounded-xl shadow-sm hover:bg-indigo-50 transition">
-                    View All Bookings
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('users')}
-                    className="px-6 py-2.5 bg-rose-600 text-white font-bold rounded-xl shadow-sm hover:bg-rose-700 transition flex items-center gap-2"
-                  >
-                    <Users className="w-4 h-4" /> Manage Users
-                  </button>
-                </div>
-              </section>
+              </motion.section>
             )}
 
-            {/* Resources grid */}
-            <section>
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
-                <div className="flex gap-2">
-                  <span className="w-3 h-3 rounded-full bg-indigo-200" />
-                  <span className="w-3 h-3 rounded-full bg-indigo-400" />
-                  <span className="w-3 h-3 rounded-full bg-indigo-600" />
+            {/* Resources */}
+            <motion.section variants={sectionVariant}>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
+                <div className="flex gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-200" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -337,51 +354,91 @@ const Dashboard = () => {
                 )}
 
                 {!loadingResources && !resourcesError && resources.map((res) => (
-                  <ResourceCard key={res.id || res.title} resource={res} onBook={(resource) => { setSelectedResource(resource); setIsModalOpen(true); }} />
+                  <ResourceCard key={res.id} resource={res} onBook={(resource) => { setSelectedResource(resource); setIsModalOpen(true); }} />
                 ))}
               </div>
-            </section>
+            </motion.section>
 
-            {/* Recent bookings + activity */}
-            <section className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-              <div className="lg:col-span-2 space-y-6">
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">
-                  {isAdmin ? 'All Recent Bookings' : 'Your Recent Bookings'}
-                </h3>
+            {/* Bookings + Activity */}
+            <motion.section variants={sectionVariant} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="lg:col-span-2 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">
+                    {isAdmin ? 'All Recent Bookings' : 'Your Recent Bookings'}
+                  </h3>
+                  <button 
+                    onClick={() => navigate('/bookings')}
+                    className="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                  >
+                    View All
+                  </button>
+                </div>
+                
                 <div className="glass-card divide-y divide-slate-100 overflow-hidden">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="p-8 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group">
-                      <div className="flex items-center gap-6">
-                        <div className="h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
-                          <Calendar className="w-8 h-8" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-xl text-slate-900 tracking-tight">IoT Lab Session</p>
-                          <p className="text-slate-500 font-medium mt-1">Apr 10, 2026 • 09:00 AM - 11:00 AM</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-indigo-600 font-bold group-hover:gap-4 transition-all pr-4">
-                        View <ArrowRight className="w-5 h-5" />
-                      </div>
+                  {loadingBookings ? (
+                    <div className="p-10 flex justify-center">
+                      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
                     </div>
-                  ))}
+                  ) : bookings.length === 0 ? (
+                    <div className="p-12 text-center text-slate-400 font-medium">
+                      No recent bookings found.
+                    </div>
+                  ) : (
+                    bookings.slice(0, 5).map((booking) => (
+                      <div 
+                        key={booking.id} 
+                        onClick={() => navigate('/bookings')}
+                        className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group"
+                      >
+                        <div className="flex items-center gap-5">
+                          <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
+                            <Calendar className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 tracking-tight">{booking.resourceName}</p>
+                            <p className="text-slate-400 font-medium mt-0.5 text-sm">
+                              {new Date(booking.startTime).toLocaleDateString()} • {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                            booking.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                            booking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            {booking.status}
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
               <div>
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-6">Activity Feed</h3>
-                <div className="glass-card p-2 space-y-2">
-                  <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-100">
+                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight mb-4">Activity Feed</h3>
+                <div className="glass-card p-2 space-y-1.5">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100">
                     <p className="text-sm font-bold text-indigo-900">System Maintenance</p>
-                    <p className="text-xs text-indigo-700 mt-1">The Library Zone B will be closed for maintenance on Sunday.</p>
+                    <p className="text-xs text-indigo-700 mt-1 font-medium">Library Zone B closed for maintenance Sunday.</p>
                   </div>
                   <div className="p-4 rounded-xl hover:bg-slate-50 transition-colors">
                     <p className="text-sm font-bold text-slate-800">New Resource Added</p>
-                    <p className="text-xs text-slate-500 mt-1">Check out the new Study Room 05 in Block C.</p>
+                    <p className="text-xs text-slate-500 mt-1 font-medium">Check out the new Study Room 05 in Block C.</p>
+                  </div>
+                  <div className="p-4 rounded-xl hover:bg-slate-50 transition-colors">
+                    <p className="text-sm font-bold text-slate-800">Peak Hours Alert</p>
+                    <p className="text-xs text-slate-500 mt-1 font-medium">IoT Lab is fully booked on Fridays 2–5 PM.</p>
                   </div>
                 </div>
               </div>
-            </section>
+            </motion.section>
+          </motion.div>
+        ) : (
+          <motion.div key="users" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <UserManagementTab />
           </motion.div>
         )}
       </AnimatePresence>
@@ -392,7 +449,7 @@ const Dashboard = () => {
         selectedResource={selectedResource}
         onBookingSuccess={() => alert('Booking created successfully!')}
       />
-    </div>
+    </motion.div>
   );
 };
 
