@@ -83,7 +83,7 @@ public class UserEntity {
      * Has a SQL-level DEFAULT so existing rows are not affected when the column
      * is added or when the field is null on insert for legacy code paths.
      */
-    @Column(name = "updated_at", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     // ── Lifecycle callbacks ────────────────────────────────────────────────────
