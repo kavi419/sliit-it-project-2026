@@ -12,12 +12,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,15 +42,12 @@ class BookingControllerTest {
     @Mock
     private ResourceRepository resourceRepository;
 
-    @Mock
-    private OAuth2User oauth2User;
-
     @InjectMocks
     private BookingController bookingController;
 
     private UserEntity user;
     private ResourceEntity activeResource;
-    private Map<String, String> payload;
+    private Map<String, Object> payload;
 
     @BeforeEach
     void setUp() {
@@ -67,18 +69,24 @@ class BookingControllerTest {
         payload.put("resourceId", "10");
         payload.put("startTime", "2026-04-25T09:00:00");
         payload.put("endTime", "2026-04-25T11:00:00");
+
+        // Setup Spring Security context so getAuthEmail() returns our test user
+        Authentication auth = new UsernamePasswordAuthenticationToken("student@campus.edu", null, List.of());
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
     }
 
     @Test
     void createBooking_ShouldSaveActiveResourceBooking() {
-        when(oauth2User.getAttribute("email")).thenReturn("student@campus.edu");
         when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(user));
         when(resourceRepository.findById(10L)).thenReturn(Optional.of(activeResource));
+        when(bookingRepository.findOverlappingBookings(any(), any(), any())).thenReturn(List.of());
         when(bookingRepository.save(any(BookingEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        ResponseEntity<?> response = bookingController.createBooking(oauth2User, payload);
+        ResponseEntity<?> response = bookingController.createBooking(payload);
 
-        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
         BookingEntity saved = (BookingEntity) response.getBody();
         assertNotNull(saved);
         assertEquals("Innovation Lab", saved.getResourceName());
@@ -99,14 +107,12 @@ class BookingControllerTest {
 
         payload.put("resourceId", "11");
 
-        when(oauth2User.getAttribute("email")).thenReturn("student@campus.edu");
         when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(user));
         when(resourceRepository.findById(11L)).thenReturn(Optional.of(maintenanceResource));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> bookingController.createBooking(oauth2User, payload));
+        ResponseEntity<?> response = bookingController.createBooking(payload);
 
-        assertEquals("Selected resource is not available for booking", ex.getMessage());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(bookingRepository, never()).save(any());
     }
 
@@ -114,14 +120,12 @@ class BookingControllerTest {
     void createBooking_ShouldRejectInvalidTimeWindow() {
         payload.put("endTime", "2026-04-25T08:00:00");
 
-        when(oauth2User.getAttribute("email")).thenReturn("student@campus.edu");
         when(userRepository.findByEmail("student@campus.edu")).thenReturn(Optional.of(user));
         when(resourceRepository.findById(10L)).thenReturn(Optional.of(activeResource));
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> bookingController.createBooking(oauth2User, payload));
+        ResponseEntity<?> response = bookingController.createBooking(payload);
 
-        assertEquals("endTime must be after startTime", ex.getMessage());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         verify(bookingRepository, never()).save(any());
     }
 }
