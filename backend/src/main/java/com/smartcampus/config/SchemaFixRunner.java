@@ -8,10 +8,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Runs once at startup to apply schema fixes that ddl-auto=update cannot handle
- * (specifically changing NOT NULL columns to NULL).
+ * Runs once at startup to apply schema fixes that ddl-auto=update cannot handle.
  *
- * Safe to run repeatedly — uses MODIFY COLUMN which is idempotent.
+ * Uses standard PostgreSQL ALTER TABLE syntax (compatible with Supabase).
+ * Safe to run repeatedly — all statements catch exceptions and log a warning on skip.
  */
 @Component
 public class SchemaFixRunner implements ApplicationRunner {
@@ -25,28 +25,30 @@ public class SchemaFixRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        log.info("SchemaFixRunner: applying schema fixes...");
-        try {
-            // Make google_sub nullable — email/password users have no Google sub claim
-            jdbc.execute(
-                "ALTER TABLE app_users MODIFY COLUMN google_sub TEXT NULL"
-            );
-            log.info("SchemaFixRunner: google_sub → nullable ✓");
-        } catch (Exception e) {
-            log.warn("SchemaFixRunner: google_sub fix skipped ({})", e.getMessage());
-        }
+        log.info("SchemaFixRunner: applying PostgreSQL schema fixes...");
 
-        try {
-            // Ensure updated_at has a DB-level default so omitting it on INSERT is safe
-            jdbc.execute(
-                "ALTER TABLE app_users MODIFY COLUMN updated_at DATETIME NULL " +
-                "DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"
-            );
-            log.info("SchemaFixRunner: updated_at → nullable with DEFAULT ✓");
-        } catch (Exception e) {
-            log.warn("SchemaFixRunner: updated_at fix skipped ({})", e.getMessage());
-        }
+        // Make google_sub nullable — email/password users have no Google sub claim
+        runSafe(
+            "ALTER TABLE app_users ALTER COLUMN google_sub DROP NOT NULL",
+            "google_sub → nullable"
+        );
+
+        // Make updated_at nullable — avoids NOT NULL violation on insert
+        runSafe(
+            "ALTER TABLE app_users ALTER COLUMN updated_at DROP NOT NULL",
+            "updated_at → nullable"
+        );
 
         log.info("SchemaFixRunner: done.");
+    }
+
+    private void runSafe(String sql, String description) {
+        try {
+            jdbc.execute(sql);
+            log.info("SchemaFixRunner: {} ✓", description);
+        } catch (Exception e) {
+            // Column may already be nullable — this is safe to ignore
+            log.warn("SchemaFixRunner: {} skipped ({})", description, e.getMessage());
+        }
     }
 }
