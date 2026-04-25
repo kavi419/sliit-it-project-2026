@@ -17,6 +17,7 @@ public record ResourceResponse(
         String imageUrl,
         String description,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        LocalDateTime nextAvailableSlot
 ) {
 }

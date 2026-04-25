@@ -21,6 +21,7 @@ import java.util.List;
 public class ResourceService {
 
     private final ResourceRepository resourceRepository;
+    private final com.smartcampus.repository.BookingRepository bookingRepository;
 
     public Page<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status, Pageable pageable) {
         Specification<ResourceEntity> specification = (root, criteriaQuery, criteriaBuilder) -> {
@@ -108,6 +109,20 @@ public class ResourceService {
     }
 
     private ResourceResponse toResponse(ResourceEntity resource) {
+        java.time.LocalDateTime nextAvailable = null;
+        if (resource.getStatus() == ResourceStatus.ACTIVE) {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            List<com.smartcampus.model.BookingEntity> overlaps = bookingRepository.findOverlappingBookings(
+                resource.getName(), now, now.plusSeconds(1)
+            );
+            if (!overlaps.isEmpty()) {
+                nextAvailable = overlaps.stream()
+                    .map(com.smartcampus.model.BookingEntity::getEndTime)
+                    .max(java.time.LocalDateTime::compareTo)
+                    .orElse(null);
+            }
+        }
+
         return new ResourceResponse(
                 resource.getId(),
                 resource.getName(),
@@ -120,7 +135,8 @@ public class ResourceService {
                 resource.getImageUrl(),
                 resource.getDescription(),
                 resource.getCreatedAt(),
-                resource.getUpdatedAt()
+                resource.getUpdatedAt(),
+                nextAvailable
         );
     }
 
