@@ -110,16 +110,24 @@ public class ResourceService {
 
     private ResourceResponse toResponse(ResourceEntity resource) {
         java.time.LocalDateTime nextAvailable = null;
+        Double occupancyProgress = 0.0;
         if (resource.getStatus() == ResourceStatus.ACTIVE) {
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
             List<com.smartcampus.model.BookingEntity> overlaps = bookingRepository.findOverlappingBookings(
                 resource.getName(), now, now.plusSeconds(1)
             );
             if (!overlaps.isEmpty()) {
+                com.smartcampus.model.BookingEntity active = overlaps.get(0);
                 nextAvailable = overlaps.stream()
                     .map(com.smartcampus.model.BookingEntity::getEndTime)
                     .max(java.time.LocalDateTime::compareTo)
                     .orElse(null);
+                
+                long total = java.time.Duration.between(active.getStartTime(), active.getEndTime()).toSeconds();
+                long elapsed = java.time.Duration.between(active.getStartTime(), now).toSeconds();
+                if (total > 0) {
+                    occupancyProgress = Math.min(100.0, Math.max(0.0, (elapsed * 100.0) / total));
+                }
             }
         }
 
@@ -136,7 +144,8 @@ public class ResourceService {
                 resource.getDescription(),
                 resource.getCreatedAt(),
                 resource.getUpdatedAt(),
-                nextAvailable
+                nextAvailable,
+                occupancyProgress
         );
     }
 

@@ -18,6 +18,7 @@ public record ResourceResponse(
         String description,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        LocalDateTime nextAvailableSlot
+        LocalDateTime nextAvailableSlot,
+        Double occupancyProgress
 ) {
 }
