@@ -14,6 +14,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,14 +33,15 @@ public class ResourceController {
     private final HttpServletRequest httpServletRequest;
 
     @GetMapping
-    public ResponseEntity<List<ResourceResponse>> searchResources(
+    public ResponseEntity<Page<ResourceResponse>> searchResources(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) Integer maxCapacity,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) ResourceStatus status) {
-        return ResponseEntity.ok(resourceService.searchResources(query, type, minCapacity, maxCapacity, location, status));
+            @RequestParam(required = false) ResourceStatus status,
+            @PageableDefault(size = 10, sort = "name", direction = Sort.Direction.ASC) Pageable pageable) {
+        return ResponseEntity.ok(resourceService.searchResources(query, type, minCapacity, maxCapacity, location, status, pageable));
     }
 
     @GetMapping("/{id}")
@@ -46,59 +51,70 @@ public class ResourceController {
 
     @PostMapping
     public ResponseEntity<ResourceResponse> createResource(
-            @AuthenticationPrincipal OAuth2User oauth2User,
             @Valid @RequestBody ResourceRequest request) {
-        ensureAdmin(oauth2User);
+        ensureAdmin();
         return ResponseEntity.status(HttpStatus.CREATED).body(resourceService.createResource(request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<ResourceResponse> updateResource(
-            @AuthenticationPrincipal OAuth2User oauth2User,
             @PathVariable Long id,
             @Valid @RequestBody ResourceRequest request) {
-        ensureAdmin(oauth2User);
+        ensureAdmin();
         return ResponseEntity.ok(resourceService.updateResource(id, request));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<ResourceResponse> updateStatus(
-            @AuthenticationPrincipal OAuth2User oauth2User,
             @PathVariable Long id,
             @Valid @RequestBody ResourceStatusUpdateRequest request) {
-        ensureAdmin(oauth2User);
+        ensureAdmin();
         return ResponseEntity.ok(resourceService.updateStatus(id, request.status()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteResource(
-            @AuthenticationPrincipal OAuth2User oauth2User,
             @PathVariable Long id) {
-        ensureAdmin(oauth2User);
+        ensureAdmin();
         resourceService.deleteResource(id);
         return ResponseEntity.noContent().build();
     }
 
-    private UserEntity ensureAdmin(OAuth2User oauth2User) {
-        if (oauth2User == null) {
-            String mockRole = httpServletRequest.getHeader("X-Mock-Role");
-            if (!"ADMIN".equalsIgnoreCase(mockRole)) {
-                throw new RuntimeException("Admin access required");
-            }
-            String mockEmail = "admin@test.com";
-            return userRepository.findByEmail(mockEmail)
-                    .orElseGet(() -> {
-                        UserEntity user = new UserEntity();
-                        user.setName("Mock Admin");
-                        user.setEmail(mockEmail);
-                        user.setRole("ADMIN");
-                        return userRepository.save(user);
-                    });
+    private String getAuthEmail() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            return null;
         }
 
-        String email = oauth2User.getAttribute("email");
+        if (auth.getPrincipal() instanceof org.springframework.security.oauth2.core.user.OAuth2User oauth2User) {
+            return oauth2User.getAttribute("email");
+        }
+
+        return auth.getName();
+    }
+
+    private UserEntity ensureAdmin() {
+        String email = getAuthEmail();
+        
+        if (email == null) {
+            // Fallback for dev testing with X-Mock-Role
+            String mockRole = httpServletRequest.getHeader("X-Mock-Role");
+            if ("ADMIN".equalsIgnoreCase(mockRole)) {
+                String mockEmail = "admin@test.com";
+                return userRepository.findByEmail(mockEmail)
+                        .orElseGet(() -> {
+                            UserEntity user = new UserEntity();
+                            user.setName("Mock Admin");
+                            user.setEmail(mockEmail);
+                            user.setRole("ADMIN");
+                            return userRepository.save(user);
+                        });
+            }
+            throw new RuntimeException("Authentication required");
+        }
+
         UserEntity user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found in database"));
+                .orElseThrow(() -> new RuntimeException("User not found in database: " + email));
 
         if (!"ADMIN".equalsIgnoreCase(user.getRole())) {
             throw new RuntimeException("Admin access required");

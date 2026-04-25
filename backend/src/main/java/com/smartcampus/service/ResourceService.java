@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +22,7 @@ public class ResourceService {
 
     private final ResourceRepository resourceRepository;
 
-    public List<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status) {
+    public Page<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status, Pageable pageable) {
         Specification<ResourceEntity> specification = (root, criteriaQuery, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -56,7 +58,7 @@ public class ResourceService {
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
 
-        return resourceRepository.findAll(specification).stream().map(this::toResponse).toList();
+        return resourceRepository.findAll(specification, pageable).map(this::toResponse);
     }
 
     public ResourceResponse getResource(Long id) {
