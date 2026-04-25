@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import BookingModal from '../components/BookingModal';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
 // Shared animation variant for staggered section reveal
 const sectionVariant = {
