@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -30,6 +32,7 @@ public class AuthController {
 
     private final UserRepository  userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
     public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository  = userRepository;
@@ -151,9 +154,12 @@ public class AuthController {
     //         401 if credentials are wrong
     // ──────────────────────────────────────────────────────────────────────────
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody Map<String, String> request) {
-        String email    = request.get("email");
-        String password = request.get("password");
+    public ResponseEntity<Map<String, String>> login(
+            @RequestBody Map<String, String> requestData,
+            jakarta.servlet.http.HttpServletRequest request,
+            jakarta.servlet.http.HttpServletResponse response) {
+        String email    = requestData.get("email");
+        String password = requestData.get("password");
 
         if (email == null || password == null) {
             return error(HttpStatus.BAD_REQUEST, "Email and password are required.");
@@ -184,6 +190,18 @@ public class AuthController {
         }
 
         logger.info("login: successful for {} (role={}, status={})", trimmedEmail, user.getRole(), user.getStatus());
+
+        // ── Manually set authentication in SecurityContext for session persistence ──
+        org.springframework.security.authentication.UsernamePasswordAuthenticationToken auth = 
+            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                trimmedEmail, null, java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + user.getRole())));
+        
+        org.springframework.security.core.context.SecurityContext context = org.springframework.security.core.context.SecurityContextHolder.createEmptyContext();
+        context.setAuthentication(auth);
+        org.springframework.security.core.context.SecurityContextHolder.setContext(context);
+        
+        // Save to session so Spring Security can find it in subsequent requests
+        securityContextRepository.saveContext(context, request, response);
 
         Map<String, String> body = new HashMap<>();
         body.put("role",   user.getRole());

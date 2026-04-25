@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import TicketsMain from './pages/Tickets/TicketsMain';
 import ModernLogin from './components/ModernLogin';
 import WaitingPage from './pages/WaitingPage';
+import Bookings from './pages/Bookings';
 
 /**
  * ProtectedRoute — guards routes that require an active session.
@@ -71,6 +72,19 @@ function App() {
               path="/settings"
               element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>}
             />
+feature/sachini/incident-ticket
+
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+            <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
+       main
           </Route>
         </Routes>
       </Router>

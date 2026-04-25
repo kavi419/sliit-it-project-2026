@@ -13,6 +13,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
+ feature/sachini/incident-ticket
+
+        // No path rewrite — /api/* passes through to backend /api/* unchanged
+ main
       }
     }
   }
