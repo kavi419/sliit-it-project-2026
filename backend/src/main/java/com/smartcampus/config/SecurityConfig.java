@@ -82,6 +82,15 @@ public class SecurityConfig {
         };
     }
 
+    /**
+     * Shared SecurityContextRepository to ensure that manual authentication (AuthController)
+     * and automatic session persistence (Spring Security filter chain) use the same storage.
+     */
+    @Bean
+    public org.springframework.security.web.context.SecurityContextRepository securityContextRepository() {
+        return new org.springframework.security.web.context.HttpSessionSecurityContextRepository();
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -90,17 +99,14 @@ public class SecurityConfig {
 
             // ── Authorization rules ──────────────────────────────────────────
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/bookings/**", "/api/bookings").permitAll()
+                .requestMatchers("/api/auth/**", "/api/user/me", "/", "/index.html", "/error").permitAll()
+                .requestMatchers("/api/bookings/**", "/api/bookings").authenticated()
                 .anyRequest().permitAll()
             )
 
             // ── OAuth2 Login (Google) ─────────────────────────────────────────
             .oauth2Login(oauth2 -> oauth2
-                // Explicitly wire our custom service to save/update user in app_users
-                .userInfoEndpoint(userInfo -> userInfo
-                    .userService(oAuth2UserService)
-                )
-                // Print all user attributes on success, then redirect
+                .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2UserService))
                 .successHandler(oAuth2SuccessHandler())
             )
 
@@ -118,7 +124,7 @@ public class SecurityConfig {
             
             // ── Security Context Persistence ─────────────────────────────────
             .securityContext(context -> context
-                .securityContextRepository(new org.springframework.security.web.context.HttpSessionSecurityContextRepository())
+                .securityContextRepository(securityContextRepository())
             );
 
         return http.build();

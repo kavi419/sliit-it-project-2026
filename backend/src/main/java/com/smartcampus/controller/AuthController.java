@@ -32,11 +32,12 @@ public class AuthController {
 
     private final UserRepository  userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
+    private final SecurityContextRepository securityContextRepository;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, SecurityContextRepository securityContextRepository) {
         this.userRepository  = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.securityContextRepository = securityContextRepository;
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -202,6 +203,7 @@ public class AuthController {
         
         // Save to session so Spring Security can find it in subsequent requests
         securityContextRepository.saveContext(context, request, response);
+        logger.info("login: context saved to session. JSESSIONID={}", request.getSession().getId());
 
         Map<String, String> body = new HashMap<>();
         body.put("role",   user.getRole());

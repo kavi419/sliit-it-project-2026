@@ -229,7 +229,7 @@ const ModernLogin = () => {
     finally { setLoading(false); }
   };
 
-  const handleGoogle = () => { window.location.href = 'http://localhost:8080/oauth2/authorization/google'; };
+  const handleGoogle = () => { window.location.href = 'http://localhost:5000/oauth2/authorization/google'; };
 
   // ── Step renders ────────────────────────────────────────────────────────────
   const renderStep = () => {

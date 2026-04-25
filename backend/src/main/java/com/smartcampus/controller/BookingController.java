@@ -37,13 +37,24 @@ public class BookingController {
      */
     private String getAuthEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        logger.info("getAuthEmail: auth={}, isAuthenticated={}", 
+            auth != null ? auth.getClass().getSimpleName() : "null",
+            auth != null && auth.isAuthenticated());
+
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            logger.warn("getAuthEmail: No valid authentication found in SecurityContext.");
             return null;
         }
+
         if (auth.getPrincipal() instanceof OAuth2User oauth2User) {
-            return oauth2User.getAttribute("email");
+            String email = oauth2User.getAttribute("email");
+            logger.info("getAuthEmail: OAuth2User detected. Email={}", email);
+            return email;
         }
-        return auth.getName();
+
+        String name = auth.getName();
+        logger.info("getAuthEmail: Standard Auth detected. Name/Principal={}", name);
+        return name;
     }
 
     /**
