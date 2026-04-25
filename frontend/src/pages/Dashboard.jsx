@@ -45,11 +45,33 @@ const ResourceCard = ({ resource, onBook }) => (
       </div>
 
       {resource.status !== 'Available' && resource.nextSlot && (
-        <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
-          <Clock className="w-4 h-4 text-amber-600" />
-          <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">
-            Next Slot: {new Date(resource.nextSlot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </p>
+        <div className="mt-4 space-y-3">
+          <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">
+              Next Slot: {new Date(resource.nextSlot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <span>Occupancy</span>
+              <span>{Math.round(resource.progress || 0)}%</span>
+            </div>
+            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${resource.progress || 0}%` }}
+                transition={{ duration: 1, ease: "easeOut" }}
+                className={`h-full rounded-full ${
+                  resource.progress > 80 ? 'bg-gradient-to-r from-rose-500 to-pink-500' : 
+                  resource.progress > 50 ? 'bg-gradient-to-r from-amber-500 to-orange-500' :
+                  'bg-gradient-to-r from-indigo-500 to-violet-500'
+                }`}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -340,7 +362,8 @@ const Dashboard = () => {
           image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
           location: resource.location,
           capacity: resource.capacity,
-          nextSlot: resource.nextAvailableSlot
+          nextSlot: resource.nextAvailableSlot,
+          progress: resource.occupancyProgress
         }));
 
         setResources(mapped);
