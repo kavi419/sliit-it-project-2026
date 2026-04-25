@@ -53,8 +53,10 @@ const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess, boo
           const matchingRes = mapped.find(r => r.name === bookingToEdit.resourceName);
           if (matchingRes) setResourceId(matchingRes.id);
         } else {
-          const initialId = selectedResource?.id ? String(selectedResource.id) : mapped[0]?.id || '';
-          setResourceId(initialId);
+          // Pre-select from selectedResource prop (passed from Dashboard or Resources page)
+          const preselectedId = selectedResource?.id ? String(selectedResource.id) : null;
+          const fallbackFirst = mapped[0]?.id || '';
+          setResourceId(preselectedId || fallbackFirst);
           setDate('');
           setStartTime('');
           setEndTime('');
@@ -104,7 +106,17 @@ const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess, boo
     }
   };
 
-  const selectedResourceName = activeResources.find((resource) => resource.id === resourceId)?.name || bookingToEdit?.resourceName || selectedResource?.title || 'Selected Resource';
+  // Derive the selected resource name for the title:
+  // 1. From loaded dropdown (most accurate after fetch)
+  // 2. From bookingToEdit.resourceName (for edit mode)
+  // 3. From selectedResource prop (passed from parent, object with .title or .name)
+  // 4. Fallback
+  const selectedResourceName =
+    activeResources.find((r) => r.id === resourceId)?.name ||
+    bookingToEdit?.resourceName ||
+    selectedResource?.title ||
+    selectedResource?.name ||
+    'a Resource';
 
   return (
     <AnimatePresence>

@@ -4,7 +4,7 @@
 Resource & Facility Management module for Smart Campus Hub.
 
 ## Current Progress
-- Estimated completion: **95/100**
+- Estimated completion: **100/100**
 - Branch used: `feature/Shehan`
 - Latest completed areas:
   - Backend resource CRUD
@@ -43,10 +43,12 @@ Resource & Facility Management module for Smart Campus Hub.
 - Backend test run successful (`mvn test`)
 - Frontend build successful (`npm run build`)
 
-## Remaining Work (To Reach 96+)
-1. Optional final hardening if time allows:
-  - pagination or sorting for `/api/resources`
-  - one more negative test for an invalid booking payload edge case
+## Remaining Work (To Reach 100/100)
+1. Final hardening:
+  - pagination and sorting for `/api/resources` [DONE]
+  - one more negative test for an invalid booking payload edge case [DONE]
+  - integration of real bookings API on dashboard [DONE]
+  - User Journey Integration Test [DONE]
 
 ## Day-by-Day Plan
 
