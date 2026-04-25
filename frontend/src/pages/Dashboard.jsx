@@ -56,7 +56,7 @@ const UserManagementTab = () => {
 
   const fetchPending = () => {
     setLoadingUsers(true);
-    axios.get('http://localhost:8080/api/admin/pending-users', { withCredentials: true })
+    axios.get('/api/admin/pending-users', { withCredentials: true })
       .then(res => setPendingUsers(res.data))
       .catch(() => setPendingUsers([]))
       .finally(() => setLoadingUsers(false));
@@ -67,7 +67,7 @@ const UserManagementTab = () => {
   const handleApprove = async (id, email) => {
     setApprovingId(id);
     try {
-      await axios.post(`http://localhost:8080/api/admin/approve/${id}`, {}, { withCredentials: true });
+      await axios.post(`/api/admin/approve/${id}`, {}, { withCredentials: true });
       setToast(`✅ ${email} approved as Admin!`);
       setPendingUsers(prev => prev.filter(u => u.id !== id));
       setTimeout(() => setToast(''), 4000);
@@ -192,7 +192,7 @@ const Dashboard = () => {
     const fetchRecent = async () => {
       try {
         const url = isAdmin ? '/api/bookings' : '/api/bookings/my';
-        const response = await axios.get(`http://localhost:8080${url}`, { withCredentials: true });
+        const response = await axios.get(url, { withCredentials: true });
         setRecentBookings(response.data.slice(0, 3)); // Show top 3
       } catch (err) {
         console.error('Failed to fetch dashboard bookings:', err);
