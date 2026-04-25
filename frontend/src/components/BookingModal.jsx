@@ -1,14 +1,36 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, Clock, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
-const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
+const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess, bookingToEdit }) => {
+  const navigate = useNavigate();
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [attendees, setAttendees] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (bookingToEdit) {
+      const start = new Date(bookingToEdit.startTime);
+      const end = new Date(bookingToEdit.endTime);
+      setDate(start.toISOString().split('T')[0]);
+      setStartTime(start.toTimeString().split(' ')[0].substring(0, 5));
+      setEndTime(end.toTimeString().split(' ')[0].substring(0, 5));
+      setPurpose(bookingToEdit.purpose);
+      setAttendees(bookingToEdit.attendeesCount || 1);
+    } else {
+      setDate('');
+      setStartTime('');
+      setEndTime('');
+      setPurpose('');
+      setAttendees(1);
+    }
+  }, [bookingToEdit, isOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,17 +39,25 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
 
     try {
       const payload = {
-        resourceName,
+        resourceName: bookingToEdit ? bookingToEdit.resourceName : resourceName,
+        purpose,
+        attendees,
         startTime: `${date}T${startTime}:00`,
         endTime: `${date}T${endTime}:00`
       };
 
-      await axios.post('/api/bookings', payload);
+      if (bookingToEdit) {
+        await axios.put(`/api/bookings/${bookingToEdit.id}`, payload, { withCredentials: true });
+      } else {
+        await axios.post('/api/bookings', payload, { withCredentials: true });
+      }
+      
       onBookingSuccess();
       onClose();
+      if (!bookingToEdit) navigate('/bookings');
     } catch (err) {
-      console.error('Booking failed:', err);
-      setError('Failed to create booking. Please check your time slots.');
+      console.error('Booking failed:', err.response ? err.response.data : err.message);
+      setError(err.response?.data || 'Failed to process booking. Please check for scheduling conflicts.');
     } finally {
       setLoading(false);
     }
@@ -51,12 +81,12 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg glass-card p-10 z-[101] shadow-2xl"
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg glass-card p-10 z-[101] shadow-2xl maxHeight-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-2xl font-bold text-slate-900">Book {resourceName}</h3>
-                <p className="text-slate-500 text-sm mt-1">Select your preferred date and time slots.</p>
+                <h3 className="text-2xl font-bold text-slate-900">{bookingToEdit ? `Edit ${bookingToEdit.resourceName}` : `Book ${resourceName}`}</h3>
+                <p className="text-slate-500 text-sm mt-1">{bookingToEdit ? 'Modify your booking details.' : 'Select your preferred date and time slots.'}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400">
                 <X className="w-6 h-6" />
@@ -104,14 +134,38 @@ const BookingModal = ({ isOpen, onClose, resourceName, onBookingSuccess }) => {
                 </div>
               </div>
 
-              {error && <p className="text-sm text-red-500 font-medium text-center">{error}</p>}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Purpose</label>
+                <textarea
+                  required
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g. Group study session, project development"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all h-24 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Expected Attendees</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  required
+                  value={attendees}
+                  onChange={(e) => setAttendees(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                />
+              </div>
+
+              {error && <p className="text-sm text-red-500 font-medium text-center bg-red-50 p-3 rounded-xl">{error}</p>}
 
               <button
                 type="submit"
                 disabled={loading}
                 className="w-full py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3"
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Booking'}
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (bookingToEdit ? 'Save Changes' : 'Confirm Booking')}
               </button>
             </form>
           </motion.div>
