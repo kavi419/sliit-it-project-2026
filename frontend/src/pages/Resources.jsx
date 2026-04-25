@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Filter, MapPin, Users, Edit3, Trash2, RefreshCcw, ShieldAlert, Clock3 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Filter, MapPin, Users, Edit3, Trash2, RefreshCcw, Clock3 } from 'lucide-react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import api from '../utils/axiosConfig';
 import { useAuth } from '../context/AuthContext';
 
@@ -216,7 +216,7 @@ const Resources = () => {
       if (filters.status) params.status = filters.status;
 
       const res = await api.get('/api/resources', { params });
-      setResources(res.data);
+      setResources(res.data.content || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to load resources');
     } finally {
@@ -305,14 +305,7 @@ const Resources = () => {
   };
 
   if (!isAdmin) {
-    return (
-      <div className="glass-card p-10 max-w-2xl mx-auto text-center space-y-4">
-        <ShieldAlert className="w-14 h-14 text-rose-500 mx-auto" />
-        <h1 className="text-3xl font-black text-slate-900">Admin Access Required</h1>
-        <p className="text-slate-500 font-medium">This screen is reserved for managing campus resources, so only ADMIN users can open it.</p>
-        <button onClick={() => navigate('/dashboard')} className="px-5 py-3 rounded-xl bg-indigo-600 text-white font-bold">Back to Dashboard</button>
-      </div>
-    );
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
