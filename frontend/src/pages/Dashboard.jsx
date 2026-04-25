@@ -43,13 +43,23 @@ const ResourceCard = ({ resource, onBook }) => (
         <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{resource.location || 'Campus'}</span>
         <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{resource.capacity ? `${resource.capacity} Pax` : 'N/A'}</span>
       </div>
+
+      {resource.status !== 'Available' && resource.nextSlot && (
+        <div className="mt-4 p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-center gap-2">
+          <Clock className="w-4 h-4 text-amber-600" />
+          <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">
+            Next Slot: {new Date(resource.nextSlot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </p>
+        </div>
+      )}
+
       <button
         onClick={() => onBook(resource)}
         disabled={resource.status !== 'Available'}
         className="w-full mt-6 py-3 bg-white border border-indigo-100 text-indigo-600 font-bold rounded-xl
           hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-indigo-600"
       >
-        {resource.status === 'Available' ? 'Book Now' : 'Unavailable'}
+        {resource.status === 'Available' ? 'Book Now' : 'Currently In Use'}
       </button>
     </div>
   </motion.div>
@@ -329,7 +339,8 @@ const Dashboard = () => {
           status: statusLabelMap[resource.status] || 'Unavailable',
           image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
           location: resource.location,
-          capacity: resource.capacity
+          capacity: resource.capacity,
+          nextSlot: resource.nextAvailableSlot
         }));
 
         setResources(mapped);
