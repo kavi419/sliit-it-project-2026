@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, Calendar, Layout, User, Settings, LogOut, Wrench, ClipboardList, Zap, Building2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import NotificationDropdown from './NotificationDropdown';
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: Home,     label: 'Dashboard'   },
@@ -90,9 +91,12 @@ const Sidebar = () => {
       </nav>
 
       {/* User card + logout */}
-      <div className="p-4 border-t border-slate-100">
+      <div className="p-4 border-t border-slate-100 space-y-2">
+        <div className="flex items-center justify-between px-2 pb-1">
+          <NotificationDropdown />
+        </div>
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 mb-2">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm
               ${isAdmin ? 'bg-gradient-to-br from-rose-500 to-pink-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}>
               {(user.name || user.email || 'U')[0].toUpperCase()}
