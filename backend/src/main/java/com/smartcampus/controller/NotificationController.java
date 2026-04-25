@@ -65,4 +65,21 @@ public class NotificationController {
         notificationService.deleteNotification(id, userId);
         return ResponseEntity.ok().build();
     }
+
+    // ── TEMPORARY ENDPOINT FOR TESTING ──
+    @PostMapping("/test")
+    public ResponseEntity<String> createTestNotification(@AuthenticationPrincipal OAuth2User principal, @RequestParam String msg, @RequestParam String type) {
+        Long userId = getCurrentUserId(principal);
+        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
+        
+        com.smartcampus.enums.NotificationType notifType;
+        try {
+            notifType = com.smartcampus.enums.NotificationType.valueOf(type.toUpperCase());
+        } catch (Exception e) {
+            notifType = com.smartcampus.enums.NotificationType.SYSTEM_ALERT;
+        }
+
+        notificationService.createNotification(userId, msg, notifType, 999L);
+        return ResponseEntity.ok("Test notification created successfully!");
+    }
 }
