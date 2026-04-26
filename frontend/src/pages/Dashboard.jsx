@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, 
-  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, PieChart as PieIcon 
+  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, Ban, PieChart as PieIcon 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
