@@ -17,13 +17,14 @@ public class BackendApplication {
 	public CommandLineRunner initAdmin(UserRepository userRepository) {
 		return args -> {
 			java.util.Set<String> adminEmails = java.util.Set.of(
+				"kavindu2002nethmina@gmail.com",
 				"Sachininisansala320@gmail.com",
-				"shakyasandali039@gmail.com"
+				"shakyasandali039@gmail.com",
+				"shehanmadusanka775@gmail.com"
 			);
 			
 			userRepository.findAll().forEach(u -> {
-				boolean isAuthorized = u.getEmail().toLowerCase().startsWith("kavindunethmina") || 
-					adminEmails.stream().anyMatch(e -> e.equalsIgnoreCase(u.getEmail()));
+				boolean isAuthorized = adminEmails.stream().anyMatch(e -> e.equalsIgnoreCase(u.getEmail()));
 				
 				if (isAuthorized) {
 					if (!"ADMIN".equals(u.getRole())) {
