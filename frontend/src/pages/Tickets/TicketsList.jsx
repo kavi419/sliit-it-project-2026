@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/axiosConfig';
-import { Plus, Search, Filter, Wrench, Clock, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, Wrench, Clock, CheckCircle2, XCircle, AlertTriangle, Edit3, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import CreateTicketModal from '../../components/Tickets/CreateTicketModal';
+import EditTicketModal from '../../components/Tickets/EditTicketModal';
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -30,18 +32,20 @@ const PriorityIcon = ({ priority }) => {
 };
 
 const TicketsList = ({ role }) => {
-  // If no role, fallback to simulating USER
+  const { user } = useAuth();
   const activeRole = role || 'USER';
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL'); // ALL, MY
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState(null);
 
   const fetchTickets = async () => {
     setLoading(true);
     try {
       let endpoint = '/api/tickets';
-      if (activeRole === 'USER') {
+      if (activeRole === 'USER' || activeRole === 'STUDENT') {
         endpoint = '/api/tickets/my';
       } else if (activeRole === 'TECHNICIAN') {
         endpoint = '/api/tickets/assigned';
@@ -56,6 +60,40 @@ const TicketsList = ({ role }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this ticket?')) return;
+    try {
+      await api.delete(`/api/tickets/${id}`);
+      fetchTickets();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error deleting ticket');
+    }
+  };
+
+  const handleEdit = (e, ticket) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedTicket(ticket);
+    setIsEditModalOpen(true);
+  };
+
+  const isOwner = (ticket) => {
+    if (!user || !ticket) return false;
+
+    // If fetching their own tickets, they are the owner
+    if (activeRole === 'USER' || activeRole === 'STUDENT' || filter === 'MY') {
+      return true;
+    }
+    
+    const userIdMatch = user.id && ticket.createdById && String(user.id) === String(ticket.createdById);
+    const userNameMatch = user.name && ticket.createdBy && user.name.trim().toLowerCase() === ticket.createdBy.trim().toLowerCase();
+    const userEmailMatch = user.email && ticket.createdBy && user.email.trim().toLowerCase() === ticket.createdBy.trim().toLowerCase();
+    
+    return userIdMatch || userNameMatch || userEmailMatch;
   };
 
   useEffect(() => {
@@ -138,6 +176,7 @@ const TicketsList = ({ role }) => {
                   <th className="p-5 font-bold hidden md:table-cell">Location / Resource</th>
                   <th className="p-5 font-bold">Status</th>
                   <th className="p-5 font-bold hidden sm:table-cell">Date Raised</th>
+                  <th className="p-5 font-bold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -172,6 +211,31 @@ const TicketsList = ({ role }) => {
                         {new Date(ticket.createdAt).toLocaleDateString()}
                       </div>
                     </td>
+                    <td className="p-5">
+                      <div className="flex items-center justify-center gap-2">
+                        {isOwner(ticket) && (
+                          <>
+                            <button 
+                              onClick={(e) => handleEdit(e, ticket)}
+                              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              title="Edit"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={(e) => handleDelete(e, ticket.id)}
+                              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {!isOwner(ticket) && (
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Locked</span>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -184,6 +248,13 @@ const TicketsList = ({ role }) => {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onSuccess={fetchTickets}
+      />
+      
+      <EditTicketModal 
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setSelectedTicket(null); }}
+        onSuccess={fetchTickets}
+        ticket={selectedTicket}
       />
     </div>
   );

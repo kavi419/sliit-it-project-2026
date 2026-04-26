@@ -112,6 +112,7 @@ public class DashboardController {
             response.put("status", dbUser.getStatus() != null ? dbUser.getStatus() : "ACTIVE");
             response.put("name",   dbUser.getName());
             response.put("email",  dbUser.getEmail());
+            response.put("id",     dbUser.getId());
         } else {
             response.put("role",   "STUDENT");
             response.put("status", "ACTIVE");
