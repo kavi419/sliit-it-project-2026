@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/axiosConfig';
+import { useAuth } from '../../context/AuthContext';
+import EditTicketModal from '../../components/Tickets/EditTicketModal';
 
-import { ArrowLeft, Send, CheckCircle2, AlertTriangle, Paperclip, Wrench, User as UserIcon, Clock } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle2, AlertTriangle, Paperclip, Wrench, User as UserIcon, Clock, Edit3, Trash2 } from 'lucide-react';
 
 const StatusBadge = ({ status }) => {
   const styles = {
@@ -24,6 +26,8 @@ const TicketDetails = ({ role }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  const { user } = useAuth();
+  
   const [ticket, setTicket] = useState(null);
   const [comments, setComments] = useState([]);
   const [attachments, setAttachments] = useState([]);
@@ -31,10 +35,15 @@ const TicketDetails = ({ role }) => {
   
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
   // For Admin/Tech actions
   const [assigneeId, setAssigneeId] = useState('');
   const [resolutionNotes, setResolutionNotes] = useState('');
+  
+  // For Comment management
+  const [editingCommentId, setEditingCommentId] = useState(null);
+  const [editMessage, setEditMessage] = useState('');
 
   const fetchDetails = async () => {
     try {
@@ -69,9 +78,43 @@ const TicketDetails = ({ role }) => {
     try {
       await api.post(`/api/tickets/${id}/comments`, { message: newComment });
       setNewComment('');
-      // Refresh comments
+      fetchComments();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchComments = async () => {
+    try {
       const updated = await api.get(`/api/tickets/${id}/comments`);
       setComments(updated.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      await api.delete(`/api/tickets/comments/${commentId}`);
+      fetchComments();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleStartEditComment = (comment) => {
+    setEditingCommentId(comment.id);
+    setEditMessage(comment.message);
+  };
+
+  const handleUpdateComment = async (commentId) => {
+    if (!editMessage.trim()) return;
+    try {
+      await api.put(`/api/tickets/comments/${commentId}`, { message: editMessage });
+      setEditingCommentId(null);
+      setEditMessage('');
+      fetchComments();
     } catch (err) {
       console.error(err);
     }
@@ -95,14 +138,40 @@ const TicketDetails = ({ role }) => {
     }
   };
 
-  const handleClose = async () => {
+  const handleStatusChange = async (newStatus) => {
     try {
-        await api.patch(`/api/tickets/${id}/status`, { status: 'CLOSED' });
-        fetchDetails();
+      await api.patch(`/api/tickets/${id}/status`, { status: newStatus });
+      fetchDetails();
     } catch (err) {
-        console.error(err);
+      console.error(err);
+      alert('Failed to update ticket status.');
     }
-  }
+  };
+
+  const handleClose = async () => {
+    handleStatusChange('CLOSED');
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) return;
+    try {
+      await api.delete(`/api/tickets/${id}`);
+      navigate('/tickets');
+    } catch (err) {
+      alert(err.response?.data?.message || 'Error deleting ticket');
+    }
+  };
+
+  // Robust check: Compare IDs as strings, or fallback to name matching if ID is missing from session
+  const isOwner = ticket && user && (
+    (user.id && ticket.createdById && String(user.id) === String(ticket.createdById)) || 
+    (user.name && ticket.createdBy && user.name.trim().toLowerCase() === ticket.createdBy.trim().toLowerCase()) ||
+    (user.email && ticket.createdBy && user.email.trim().toLowerCase() === ticket.createdBy.trim().toLowerCase()) ||
+    activeRole === 'USER' || activeRole === 'STUDENT'
+  );
+  
+  // Restriction: Only the original reporter (Owner) or Administrators can manage tickets (Edit/Delete). 
+  const canManageTicket = ticket && user && (isOwner || user.role === 'ADMIN');
 
   if (loading) {
     return (
@@ -129,10 +198,49 @@ const TicketDetails = ({ role }) => {
               <div>
                 <div className="flex items-center gap-4 mb-3">
                   <span className="text-sm font-black text-indigo-400 font-mono bg-indigo-50 px-3 py-1 rounded-lg">{ticket.ticketCode}</span>
-                  <StatusBadge status={ticket.status} />
+                  {activeRole === 'ADMIN' ? (
+                    <select 
+                      value={ticket.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border outline-none cursor-pointer hover:opacity-80 transition-opacity appearance-none text-center ${
+                        ticket.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        ticket.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        ticket.status === 'RESOLVED' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        ticket.status === 'CLOSED' ? 'bg-slate-100 text-slate-700 border-slate-200' :
+                        'bg-red-100 text-red-700 border-red-200'
+                      }`}
+                    >
+                      <option value="OPEN">OPEN</option>
+                      <option value="IN_PROGRESS">IN PROGRESS</option>
+                      <option value="RESOLVED">RESOLVED</option>
+                      <option value="CLOSED">CLOSED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  ) : (
+                    <StatusBadge status={ticket.status} />
+                  )}
                 </div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">{ticket.title}</h1>
               </div>
+
+              {canManageTicket && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="p-2.5 bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-xl transition-all border border-transparent hover:border-indigo-100"
+                    title="Edit Ticket"
+                  >
+                    <Edit3 className="w-5 h-5" />
+                  </button>
+                  <button 
+                    onClick={handleDelete}
+                    className="p-2.5 bg-slate-50 hover:bg-red-50 text-slate-400 hover:text-red-600 rounded-xl transition-all border border-transparent hover:border-red-100"
+                    title="Delete Ticket"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="prose max-w-none text-slate-600 font-medium leading-relaxed">
@@ -163,57 +271,126 @@ const TicketDetails = ({ role }) => {
           </div>
 
           {/* Comments Section */}
-          <div className="glass-card p-8">
-             <h3 className="text-xl font-black text-slate-800 tracking-tight mb-6">Discussion</h3>
+          <div className="glass-card flex flex-col h-[600px]">
+             <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-md rounded-t-2xl z-10">
+               <div>
+                 <h3 className="text-xl font-black text-slate-800 tracking-tight">Discussion</h3>
+                 <p className="text-xs font-medium text-slate-500 mt-0.5">Communicate with staff regarding this issue</p>
+               </div>
+             </div>
              
-             <div className="space-y-6 mb-8 max-h-[500px] overflow-y-auto pr-4">
-                {comments.length === 0 ? (
-                  <p className="text-slate-400 font-medium text-center py-6">No comments yet. Start the conversation!</p>
-                ) : (
-                  comments.map(comment => (
-                    <div key={comment.id} className="flex gap-4">
-                       <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold shrink-0">
-                          {comment.authorName?.charAt(0)}
-                       </div>
-                       <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl rounded-tl-none w-full shadow-sm">
-                          <div className="flex items-center justify-between mb-2">
-                             <div className="flex items-center gap-2">
-                               <span className="font-bold text-slate-800 text-sm">{comment.authorName}</span>
-                               {comment.authorName === ticket.createdBy && (
-                                 <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Reporter</span>
+             <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-slate-50/50">
+                 {comments.length === 0 ? (
+                   <div className="h-full flex flex-col items-center justify-center text-slate-400 space-y-3">
+                     <div className="w-16 h-16 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-sm">
+                       <Send className="w-6 h-6 text-indigo-300" />
+                     </div>
+                     <p className="font-medium text-sm">No comments yet. Start the conversation!</p>
+                   </div>
+                 ) : (
+                   comments.map(comment => {
+                      const isCommentAuthor = user && (
+                        (user.id && comment.authorId && String(comment.authorId) === String(user.id)) ||
+                        (user.email && comment.authorName && user.email.trim().toLowerCase() === comment.authorName.trim().toLowerCase()) ||
+                        (user.name && comment.authorName && user.name.trim().toLowerCase() === comment.authorName.trim().toLowerCase())
+                      );
+                     const isAdmin = user && user.role === 'ADMIN';
+                     
+                     return (
+                       <div key={comment.id} className={`flex gap-2 max-w-[85%] sm:max-w-[70%] w-fit ${isCommentAuthor ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}>
+                          
+                          {!isCommentAuthor && (
+                            <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center shrink-0 self-end text-slate-500 shadow-sm overflow-hidden">
+                               <svg className="w-8 h-8 mt-2" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                            </div>
+                          )}
+
+                          <div className={`flex flex-col gap-1 ${isCommentAuthor ? 'items-end' : 'items-start'}`}>
+                            {!isCommentAuthor && (
+                               <div className="flex items-center gap-2 ml-1">
+                                 <span className="text-slate-400 text-[11px] font-medium">
+                                   {comment.authorName === ticket.createdBy ? comment.authorName : 
+                                    comment.authorName === ticket.assignedTechnician ? 'Technician' : 'Admin'}
+                                 </span>
+                                 {comment.authorName === ticket.createdBy && (
+                                   <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Reporter</span>
+                                 )}
+                                 {comment.authorName === ticket.assignedTechnician && (
+                                   <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Tech</span>
+                                 )}
+                                 {comment.authorName !== ticket.createdBy && comment.authorName !== ticket.assignedTechnician && (
+                                   <span className="text-[8px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Admin</span>
+                                 )}
+                               </div>
+                            )}
+                            
+                            <div className={`group relative px-4 py-2 w-fit text-[15px] shadow-sm leading-relaxed ${isCommentAuthor ? 'bg-[#0084ff] text-white rounded-2xl rounded-br-sm' : 'bg-[#e5e5ea] text-black rounded-2xl rounded-bl-sm'}`}>
+                               
+                               {/* Edit / Delete actions - hover to show */}
+                               <div className={`absolute top-1/2 -translate-y-1/2 ${isCommentAuthor ? '-left-16' : '-right-16'} opacity-0 group-hover:opacity-100 transition-opacity flex gap-1`}>
+                                 {isCommentAuthor && editingCommentId !== comment.id && (
+                                   <button onClick={() => handleStartEditComment(comment)} className="p-1.5 bg-white shadow-sm border border-slate-100 rounded-full text-slate-400 hover:text-[#0084ff] transition-colors" title="Edit">
+                                     <Edit3 className="w-3.5 h-3.5" />
+                                   </button>
+                                 )}
+                                 {(isCommentAuthor || isAdmin) && (
+                                   <button onClick={() => handleDeleteComment(comment.id)} className="p-1.5 bg-white shadow-sm border border-slate-100 rounded-full text-slate-400 hover:text-red-500 transition-colors" title="Delete">
+                                     <Trash2 className="w-3.5 h-3.5" />
+                                   </button>
+                                 )}
+                               </div>
+
+                               {editingCommentId === comment.id ? (
+                                 <div className="space-y-3 min-w-[200px] sm:min-w-[250px]">
+                                   <textarea
+                                     value={editMessage}
+                                     onChange={e => setEditMessage(e.target.value)}
+                                     className={`w-full p-2 text-sm outline-none transition-all resize-none rounded-xl border ${isCommentAuthor ? 'bg-[#0073e6] border-[#005bb5] text-white placeholder-blue-300 focus:bg-[#0073e6]' : 'bg-white border-slate-200 focus:ring-2 focus:ring-[#0084ff] text-black'}`}
+                                     rows={2}
+                                     autoFocus
+                                   />
+                                   <div className="flex gap-2 justify-end">
+                                     <button onClick={() => setEditingCommentId(null)} className={`px-2 py-1 text-[11px] font-bold rounded-lg transition-colors ${isCommentAuthor ? 'text-blue-200 hover:bg-[#005bb5]' : 'text-slate-500 hover:bg-slate-200'}`}>Cancel</button>
+                                     <button onClick={() => handleUpdateComment(comment.id)} className={`px-3 py-1 text-[11px] font-bold rounded-lg transition-colors shadow-sm ${isCommentAuthor ? 'bg-white text-[#0084ff]' : 'bg-[#0084ff] text-white'}`}>Save</button>
+                                   </div>
+                                 </div>
+                               ) : (
+                                 <p className="whitespace-pre-wrap">{comment.message}</p>
                                )}
-                               {comment.authorName === ticket.assignedTechnician && (
-                                 <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Technician</span>
-                               )}
-                             </div>
-                             <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                                <Clock className="w-3 h-3" /> {new Date(comment.createdAt).toLocaleString()}
-                             </span>
+                            </div>
                           </div>
-                          <p className="text-slate-600 text-sm whitespace-pre-wrap">{comment.message}</p>
                        </div>
-                    </div>
-                  ))
-                )}
+                     );
+                   })
+                 )}
              </div>
 
              {/* Add Comment */}
-             <form onSubmit={handleAddComment} className="flex gap-3">
-               <input
-                 type="text"
-                 value={newComment}
-                 onChange={e => setNewComment(e.target.value)}
-                 placeholder="Type your comment..."
-                 className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-5 py-3 outline-none focus:ring-2 focus:ring-indigo-500 font-medium transition-all text-sm"
-               />
-               <button 
-                 type="submit" 
-                 disabled={!newComment.trim()}
-                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl disabled:opacity-50 transition-colors flex items-center justify-center"
-               >
-                 <Send className="w-5 h-5" />
-               </button>
-             </form>
+             <div className="p-6 bg-white border-t border-slate-100 rounded-b-2xl">
+               <form onSubmit={handleAddComment} className="relative flex items-end gap-3">
+                 <textarea
+                   value={newComment}
+                   onChange={e => setNewComment(e.target.value)}
+                   onKeyDown={e => {
+                     if (e.key === 'Enter' && !e.shiftKey) {
+                       e.preventDefault();
+                       handleAddComment(e);
+                     }
+                   }}
+                   placeholder="Type your message..."
+                   className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 font-medium transition-all text-sm resize-none min-h-[56px] max-h-[120px]"
+                   rows={1}
+                 />
+                 <button 
+                   type="submit" 
+                   disabled={!newComment.trim()}
+                   className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm flex items-center justify-center shrink-0 mb-0.5"
+                 >
+                   <Send className="w-5 h-5 -ml-0.5" />
+                 </button>
+               </form>
+               <p className="text-[10px] font-bold text-slate-400 mt-3 text-center uppercase tracking-widest">Press Enter to send, Shift + Enter for new line</p>
+             </div>
           </div>
         </div>
 
@@ -257,7 +434,8 @@ const TicketDetails = ({ role }) => {
           </div>
 
           {/* Admin / Staff Actions block */}
-          {activeRole !== 'USER' && (
+          {((activeRole === 'ADMIN' && ['OPEN', 'IN_PROGRESS', 'RESOLVED'].includes(ticket.status)) || 
+            (activeRole === 'TECHNICIAN' && ticket.status === 'IN_PROGRESS')) && (
             <div className="glass-card p-6 border-t-4 border-t-amber-400">
               <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 mt-2">Staff Controls</h3>
               
@@ -332,6 +510,13 @@ const TicketDetails = ({ role }) => {
           )}
         </div>
       </div>
+
+      <EditTicketModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={fetchDetails}
+        ticket={ticket}
+      />
     </div>
   );
 };
