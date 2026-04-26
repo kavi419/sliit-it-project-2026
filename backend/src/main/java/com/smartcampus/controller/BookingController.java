@@ -99,13 +99,21 @@ public class BookingController {
             }
 
             // ── Time & Holiday Restrictions ──
-            if (start.toLocalTime().isAfter(java.time.LocalTime.of(22, 0)) || 
-                end.toLocalTime().isAfter(java.time.LocalTime.of(22, 1)) ||
-                (start.toLocalTime().isBefore(java.time.LocalTime.of(6, 0)))) {
-                return ResponseEntity.badRequest().body("Bookings are only allowed between 6:00 AM and 10:00 PM.");
+            java.time.LocalTime startTime = start.toLocalTime();
+            java.time.LocalTime endTime = end.toLocalTime();
+            java.time.LocalTime openTime = java.time.LocalTime.of(8, 0);
+            java.time.LocalTime closeTime = java.time.LocalTime.of(22, 0);
+
+            System.out.println("Checking booking time: " + startTime + " to " + endTime);
+
+            if (startTime.isBefore(openTime) || startTime.isAfter(closeTime) || 
+                endTime.isAfter(closeTime) || (endTime.equals(java.time.LocalTime.MIDNIGHT))) {
+                System.out.println("REJECTED: Outside operational hours (8AM-10PM)");
+                return ResponseEntity.badRequest().body("Bookings are only allowed between 8:00 AM and 10:00 PM.");
             }
 
             if (isPublicHoliday(start.toLocalDate())) {
+                System.out.println("REJECTED: Public Holiday: " + start.toLocalDate());
                 return ResponseEntity.badRequest().body("Bookings are not allowed on Public Holidays.");
             }
 
