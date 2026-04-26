@@ -457,7 +457,13 @@ const Dashboard = () => {
       {/* ── Tab Content ── */}
       <AnimatePresence mode="wait">
         {activeTab === 'overview' ? (
-          <motion.div key="overview" className="space-y-12">
+          <motion.div 
+            key="overview" 
+            initial={{ opacity: 0, y: 8 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0 }}
+            className="space-y-12"
+          >
             {/* ... rest of the overview content ... */}
 
             {/* Admin or Student Panel */}
