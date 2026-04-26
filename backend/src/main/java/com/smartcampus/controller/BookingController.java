@@ -1,8 +1,11 @@
 package com.smartcampus.controller;
 
+import com.smartcampus.enums.ResourceStatus;
 import com.smartcampus.model.BookingEntity;
+import com.smartcampus.model.ResourceEntity;
 import com.smartcampus.model.UserEntity;
 import com.smartcampus.repository.BookingRepository;
+import com.smartcampus.repository.ResourceRepository;
 import com.smartcampus.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -15,7 +18,6 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +33,7 @@ public class BookingController {
 
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
+    private final ResourceRepository resourceRepository;
 
     /**
      * Helper to get authenticated user email.
@@ -40,10 +43,36 @@ public class BookingController {
         if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
             return null;
         }
+
         if (auth.getPrincipal() instanceof OAuth2User oauth2User) {
             return oauth2User.getAttribute("email");
         }
+
         return auth.getName();
+    }
+
+    private ResourceEntity resolveBookableResource(Map<String, Object> payload) {
+        String resourceIdValue = payload.get("resourceId") != null ? payload.get("resourceId").toString() : null;
+        ResourceEntity resource;
+
+        if (resourceIdValue != null && !resourceIdValue.isBlank()) {
+            Long resourceId = Long.parseLong(resourceIdValue);
+            resource = resourceRepository.findById(resourceId)
+                    .orElseThrow(() -> new IllegalArgumentException("Resource not found"));
+        } else {
+            String resourceName = (String) payload.get("resourceName");
+            if (resourceName == null || resourceName.isBlank()) {
+                throw new IllegalArgumentException("Resource must be selected");
+            }
+            resource = resourceRepository.findByNameIgnoreCase(resourceName.trim())
+                    .orElseThrow(() -> new IllegalArgumentException("Resource not found"));
+        }
+
+        if (resource.getStatus() != ResourceStatus.ACTIVE) {
+            throw new IllegalArgumentException("Selected resource is not available for booking");
+        }
+
+        return resource;
     }
 
     /**
@@ -59,14 +88,18 @@ public class BookingController {
             UserEntity user = userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found: " + email));
 
-            String resourceName = (String) payload.get("resourceName");
+            ResourceEntity resource = resolveBookableResource(payload);
             String purpose = (String) payload.get("purpose");
             Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : 0;
             LocalDateTime start = LocalDateTime.parse(payload.get("startTime").toString());
             LocalDateTime end = LocalDateTime.parse(payload.get("endTime").toString());
 
+            if (!start.isBefore(end)) {
+                throw new IllegalArgumentException("endTime must be after startTime");
+            }
+
             // ── Conflict Detection ──
-            List<BookingEntity> conflicts = bookingRepository.findOverlappingBookings(resourceName, start, end);
+            List<BookingEntity> conflicts = bookingRepository.findOverlappingBookings(resource.getName(), start, end);
             if (!conflicts.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body("Conflict: This resource is already booked during the selected time.");
@@ -74,7 +107,7 @@ public class BookingController {
 
             BookingEntity booking = BookingEntity.builder()
                     .user(user)
-                    .resourceName(resourceName)
+                    .resourceName(resource.getName())
                     .purpose(purpose)
                     .attendeesCount(attendees)
                     .startTime(start)
@@ -159,35 +192,20 @@ public class BookingController {
     @PostMapping("/{id}/cancel")
     public ResponseEntity<?> cancelBooking(@PathVariable Long id) {
         String email = getAuthEmail();
-        logger.info("cancelBooking: Request for id={} by user={}", id, email);
         if (email == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         UserEntity currentUser = userRepository.findByEmail(email).orElse(null);
-        if (currentUser == null) {
-            logger.warn("cancelBooking: Current user not found in DB: {}", email);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        if (currentUser == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
         return bookingRepository.findById(id).map(b -> {
             boolean isAdmin = "ADMIN".equals(currentUser.getRole());
             boolean isOwner = b.getUser().getEmail().equals(email);
 
-            logger.info("cancelBooking: Booking found. Owner={}, IsAdmin={}, CurrentRole={}", 
-                b.getUser().getEmail(), isAdmin, currentUser.getRole());
-
-            if (!isOwner && !isAdmin) {
-                logger.warn("cancelBooking: Permission denied. User {} is not owner or admin.", email);
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-            }
+            if (!isOwner && !isAdmin) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             
             b.setStatus("CANCELLED");
-            BookingEntity saved = bookingRepository.save(b);
-            logger.info("cancelBooking: SUCCESS for id={}. New status={}", id, saved.getStatus());
-            return ResponseEntity.ok(saved);
-        }).orElseGet(() -> {
-            logger.warn("cancelBooking: Booking not found for id={}", id);
-            return ResponseEntity.notFound().build();
-        });
+            return ResponseEntity.ok(bookingRepository.save(b));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     /**
@@ -200,33 +218,28 @@ public class BookingController {
 
         try {
             return bookingRepository.findById(id).map(existingBooking -> {
-                // Security: Must be the owner
                 if (!existingBooking.getUser().getEmail().equals(email)) {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this booking.");
                 }
 
-                // Business Rule: Can only edit PENDING or REJECTED (?)
-                // Let's say we allow editing but it resets status to PENDING
-                
-                String resourceName = (String) payload.get("resourceName");
+                ResourceEntity resource = resolveBookableResource(payload);
                 String purpose = (String) payload.get("purpose");
                 Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : existingBooking.getAttendeesCount();
                 LocalDateTime start = LocalDateTime.parse(payload.get("startTime").toString());
                 LocalDateTime end = LocalDateTime.parse(payload.get("endTime").toString());
 
-                // Conflict Detection (excluding current booking)
-                List<BookingEntity> conflicts = bookingRepository.findOverlappingBookingsExcluding(resourceName, start, end, id);
+                List<BookingEntity> conflicts = bookingRepository.findOverlappingBookingsExcluding(resource.getName(), start, end, id);
                 if (!conflicts.isEmpty()) {
                     return ResponseEntity.status(HttpStatus.CONFLICT)
                             .body("Conflict: This resource is already booked during the selected time.");
                 }
 
-                existingBooking.setResourceName(resourceName);
+                existingBooking.setResourceName(resource.getName());
                 existingBooking.setPurpose(purpose);
                 existingBooking.setAttendeesCount(attendees);
                 existingBooking.setStartTime(start);
                 existingBooking.setEndTime(end);
-                existingBooking.setStatus("PENDING"); // Reset to pending after edit
+                existingBooking.setStatus("PENDING");
 
                 return ResponseEntity.ok(bookingRepository.save(existingBooking));
             }).orElse(ResponseEntity.notFound().build());

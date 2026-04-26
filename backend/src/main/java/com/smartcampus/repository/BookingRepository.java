@@ -40,4 +40,9 @@ public interface BookingRepository extends JpaRepository<BookingEntity, Long> {
             @org.springframework.data.repository.query.Param("startTime") java.time.LocalDateTime startTime,
             @org.springframework.data.repository.query.Param("endTime") java.time.LocalDateTime endTime,
             @org.springframework.data.repository.query.Param("excludeId") Long excludeId);
+    @org.springframework.data.jpa.repository.Query("SELECT b.resourceName, COUNT(b) FROM BookingEntity b GROUP BY b.resourceName ORDER BY COUNT(b) DESC")
+    List<Object[]> countBookingsByResource();
+
+    @org.springframework.data.jpa.repository.Query(value = "SELECT TRIM(TO_CHAR(start_time, 'Day')) as day, COUNT(*) FROM bookings GROUP BY day ORDER BY COUNT(*) DESC", nativeQuery = true)
+    List<Object[]> countBookingsByDayOfWeek();
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+ feature/sachini/incident-ticket
 import { Home, Calendar, Layout, User, Settings, LogOut, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
@@ -11,6 +12,12 @@ const NAV_ITEMS = [
   { to: '/profile',   icon: User,     label: 'Profile'      },
   { to: '/settings',  icon: Settings, label: 'Settings'     },
 ];
+
+import { Home, Calendar, Layout, User, Settings, LogOut, Building2, Wrench } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+import NotificationDropdown from './NotificationDropdown';
+ main
 
 const SidebarItem = ({ to, icon: Icon, label }) => (
   <NavLink
@@ -49,7 +56,7 @@ const SidebarItem = ({ to, icon: Icon, label }) => (
 );
 
 const Sidebar = () => {
-  const { logout, user } = useAuth();
+  const { user, logout } = useAuth();
   const isAdmin = user?.role === 'ADMIN';
 
   return (
@@ -78,15 +85,27 @@ const Sidebar = () => {
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 flex-1 overflow-y-auto pb-4">
+feature/sachini/incident-ticket
         {NAV_ITEMS.map((item) => (
           <SidebarItem key={item.to} {...item} />
         ))}
+
+        <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
+        {isAdmin && <SidebarItem to="/resources" icon={Building2} label="Resources" />}
+        <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
+        <SidebarItem to="/tickets"   icon={Wrench}    label="Maintenance" />
+        <SidebarItem to="/profile"   icon={User}      label="Profile"    />
+        <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
+ main
       </nav>
 
       {/* User card + logout */}
-      <div className="p-4 border-t border-slate-100">
+      <div className="p-4 border-t border-slate-100 space-y-2">
+        <div className="flex items-center justify-between px-2 pb-1">
+          <NotificationDropdown />
+        </div>
         {user && (
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 mb-2">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm
               ${isAdmin ? 'bg-gradient-to-br from-rose-500 to-pink-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}>
               {(user.name || user.email || 'U')[0].toUpperCase()}

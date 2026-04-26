@@ -70,7 +70,7 @@ public class UserEntity {
      * columnDefinition includes DEFAULT 'ACTIVE' so that ddl-auto=update can
      * ALTER TABLE on existing rows without violating the NOT NULL constraint.
      */
-    @Column(nullable = false, length = 30, columnDefinition = "VARCHAR(30) DEFAULT 'ACTIVE'")
+    @Column(nullable = false, length = 30)
     @Builder.Default
     private String status = "ACTIVE";
 
@@ -83,7 +83,7 @@ public class UserEntity {
      * Has a SQL-level DEFAULT so existing rows are not affected when the column
      * is added or when the field is null on insert for legacy code paths.
      */
-    @Column(name = "updated_at", columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     // ── Lifecycle callbacks ────────────────────────────────────────────────────

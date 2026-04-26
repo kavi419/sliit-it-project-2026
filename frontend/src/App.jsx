@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
+import Resources from './pages/Resources';
 import TicketsMain from './pages/Tickets/TicketsMain';
 import ModernLogin from './components/ModernLogin';
 import WaitingPage from './pages/WaitingPage';
@@ -50,7 +51,7 @@ function App() {
           <Route path="/login" element={<ModernLogin />} />
           <Route path="/waiting" element={<WaitingPage />} />
 
-          {/* Protected routes */}
+          {/* Protected routes — all wrapped by MainLayout */}
           <Route
             element={
               <ProtectedRoute>
@@ -59,7 +60,9 @@ function App() {
             }
           >
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/resources" element={<Resources />} />
             <Route path="/tickets/*" element={<TicketsMain />} />
+ feature/sachini/incident-ticket
             <Route
               path="/bookings"
               element={
@@ -69,6 +72,10 @@ function App() {
               }
             />
             <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+
+            <Route path="/bookings" element={<Bookings />} />
+            <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+ main
             <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
           </Route>
         </Routes>
