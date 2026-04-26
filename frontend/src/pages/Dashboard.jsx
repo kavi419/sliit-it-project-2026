@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, 
-  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, Ban, PieChart as PieIcon 
+  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, PieChart as PieIcon,
+  Plus, Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -537,15 +538,28 @@ const Dashboard = () => {
               </motion.section>
             )}
 
-            {/* Resources */}
             <motion.section variants={sectionVariant}>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-200" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                <div className="flex flex-col">
+                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Explore labs, rooms and event spaces</p>
                 </div>
+                
+                {isAdmin ? (
+                  <button 
+                    onClick={() => navigate('/resources', { state: { action: 'add' } })}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add New Resource
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-200" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {loadingResources && (
