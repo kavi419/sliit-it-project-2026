@@ -90,6 +90,24 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTicketById(id));
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<TicketResponse> updateTicket(
+            @AuthenticationPrincipal OAuth2User oauth2User,
+            @PathVariable String id,
+            @RequestBody CreateTicketRequest request) {
+        UserEntity user = getAuthenticatedUser(oauth2User);
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, user.getId(), user.getRole()));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTicket(
+            @AuthenticationPrincipal OAuth2User oauth2User,
+            @PathVariable String id) {
+        UserEntity user = getAuthenticatedUser(oauth2User);
+        ticketService.deleteTicket(id, user.getId(), user.getRole());
+        return ResponseEntity.noContent().build();
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateStatus(
             @AuthenticationPrincipal OAuth2User oauth2User,

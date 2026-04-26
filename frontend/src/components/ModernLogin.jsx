@@ -211,7 +211,9 @@ const ModernLogin = () => {
     try {
       const { data } = await axios.post('/api/auth/login', { email: email.trim().toLowerCase(), password }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
-      navigate(data.role === 'ADMIN' && data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
+      if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') navigate('/waiting');
+      else if (data.role === 'TECHNICIAN') navigate('/tickets/dashboard');
+      else navigate('/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Invalid email or password.'); }
     finally { setLoading(false); }
   };
@@ -224,7 +226,9 @@ const ModernLogin = () => {
     try {
       const { data } = await axios.post('/api/auth/register', { email: email.trim().toLowerCase(), password, role }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
-      navigate(data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
+      if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') navigate('/waiting');
+      else if (data.role === 'TECHNICIAN') navigate('/tickets/dashboard');
+      else navigate('/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Registration failed. Please try again.'); }
     finally { setLoading(false); }
   };
@@ -335,8 +339,8 @@ const ModernLogin = () => {
               {/* Role Selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-2 uppercase tracking-wider">I am a...</label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {[['STUDENT', '🎓', 'Student', 'from-indigo-500 to-blue-600'], ['ADMIN', '🛡️', 'Admin', 'from-violet-500 to-purple-600']].map(([r, emoji, label, grad]) => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {[['STUDENT', '🎓', 'Student', 'from-indigo-500 to-blue-600'], ['ADMIN', '🛡️', 'Admin', 'from-violet-500 to-purple-600'], ['TECHNICIAN', '🔧', 'Technician', 'from-amber-500 to-orange-600']].map(([r, emoji, label, grad]) => (
                     <button key={r} type="button" id={`role-${r.toLowerCase()}`} onClick={() => setRole(r)}
                       className={`py-3 px-3 rounded-xl border-2 font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2
                         ${role === r

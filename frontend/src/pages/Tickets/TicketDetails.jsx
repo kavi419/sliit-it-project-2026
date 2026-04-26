@@ -257,7 +257,8 @@ const TicketDetails = ({ role }) => {
           </div>
 
           {/* Admin / Staff Actions block */}
-          {activeRole !== 'USER' && (
+          {((activeRole === 'ADMIN' && ['OPEN', 'IN_PROGRESS', 'RESOLVED'].includes(ticket.status)) || 
+            (activeRole === 'TECHNICIAN' && ticket.status === 'IN_PROGRESS')) && (
             <div className="glass-card p-6 border-t-4 border-t-amber-400">
               <h3 className="text-lg font-black text-slate-800 tracking-tight mb-4 mt-2">Staff Controls</h3>
               

@@ -80,6 +80,8 @@ class ResourceControllerTest {
                 null,
                 "Student innovation space",
                 null,
+                null,
+                null,
                 null
         );
 
@@ -165,7 +167,7 @@ class ResourceControllerTest {
         when(userRepository.save(any(UserEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(resourceService.updateStatus(1L, ResourceStatus.MAINTENANCE)).thenReturn(
                 new ResourceResponse(1L, "Innovation Lab", "Lab", 35, "Block C",
-                        ResourceStatus.MAINTENANCE, null, null, null, null, null, null)
+                        ResourceStatus.MAINTENANCE, null, null, null, "Student innovation space", null, null, null, null)
         );
 
         ResponseEntity<ResourceResponse> entity = resourceController.updateStatus(

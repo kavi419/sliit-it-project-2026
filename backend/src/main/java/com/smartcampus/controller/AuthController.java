@@ -90,8 +90,8 @@ public class AuthController {
         if (password == null || password.length() < 6) {
             return error(HttpStatus.BAD_REQUEST, "Password must be at least 6 characters.");
         }
-        if (!"STUDENT".equals(role) && !"ADMIN".equals(role)) {
-            return error(HttpStatus.BAD_REQUEST, "Role must be STUDENT or ADMIN.");
+        if (!"STUDENT".equals(role) && !"ADMIN".equals(role) && !"TECHNICIAN".equals(role)) {
+            return error(HttpStatus.BAD_REQUEST, "Role must be STUDENT, ADMIN, or TECHNICIAN.");
         }
 
         String trimmedEmail = email.trim().toLowerCase();

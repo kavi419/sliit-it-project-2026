@@ -39,13 +39,19 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (user?.role === 'TECHNICIAN') return <Navigate to="/tickets/dashboard" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <Routes>
           {/* Default route */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<RootRedirect />} />
 
           {/* Public routes */}
           <Route path="/login" element={<ModernLogin />} />
@@ -62,20 +68,8 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/tickets/*" element={<TicketsMain />} />
- feature/sachini/incident-ticket
-            <Route
-              path="/bookings"
-              element={
-                <ProtectedRoute>
-                  <Bookings />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
-
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
- main
             <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
           </Route>
         </Routes>

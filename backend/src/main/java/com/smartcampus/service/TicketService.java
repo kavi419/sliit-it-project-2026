@@ -239,6 +239,40 @@ public class TicketService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public TicketResponse updateTicket(String id, CreateTicketRequest request, Long userId, String userRole) {
+        TicketEntity ticket = findTicketByIdentifier(id);
+        
+        if (!ticket.getCreatedBy().getId().equals(userId) && !"ADMIN".equals(userRole)) {
+            throw new RuntimeException("You do not have permission to edit this ticket");
+        }
+
+        ticket.setTitle(request.getTitle());
+        ticket.setDescription(request.getDescription());
+        ticket.setCategory(request.getCategory());
+        ticket.setPriority(request.getPriority());
+        ticket.setLocation(request.getLocation());
+        ticket.setResourceName(request.getResourceName());
+        ticket.setPreferredContact(request.getPreferredContact());
+        
+        return mapToResponse(ticketRepository.save(ticket));
+    }
+
+    @Transactional
+    public void deleteTicket(String id, Long userId, String userRole) {
+        TicketEntity ticket = findTicketByIdentifier(id);
+        
+        if (!ticket.getCreatedBy().getId().equals(userId) && !"ADMIN".equals(userRole)) {
+            throw new RuntimeException("You do not have permission to delete this ticket");
+        }
+        
+        // Delete attachments and comments before deleting the ticket
+        ticketAttachmentRepository.deleteAll(ticketAttachmentRepository.findByTicketId(ticket.getId()));
+        ticketCommentRepository.deleteAll(ticketCommentRepository.findByTicketIdOrderByCreatedAtAsc(ticket.getId()));
+        
+        ticketRepository.delete(ticket);
+    }
+
     private TicketResponse mapToResponse(TicketEntity ticket) {
         return TicketResponse.builder()
                 .id(ticket.getId())
