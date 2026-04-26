@@ -178,10 +178,12 @@ const Bookings = () => {
                                     <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-1">Pass ID</p>
                                     <p class="text-lg font-mono font-black text-indigo-700">SCH-${booking.id.toString().substring(0, 8).toUpperCase()}</p>
                                 </div>
-                                <div class="w-14 h-14 bg-white p-2 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-center">
-                                    <div class="grid grid-cols-4 gap-1">
-                                        ${Array(16).fill(0).map(() => `<div class="w-1.5 h-1.5 ${Math.random() > 0.4 ? 'bg-slate-800' : 'bg-slate-100'} rounded-sm"></div>`).join('')}
-                                    </div>
+                                <div class="w-16 h-16 bg-white p-1 rounded-xl border border-indigo-100 shadow-sm flex items-center justify-center overflow-hidden">
+                                    <img 
+                                        src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SCH-VERIFY-${booking.id}-${encodeURIComponent(booking.resourceName)}" 
+                                        alt="Verification QR"
+                                        class="w-full h-full object-contain"
+                                    />
                                 </div>
                             </div>
                         </div>
