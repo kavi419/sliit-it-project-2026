@@ -246,6 +246,11 @@ public class BookingController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body("You do not own this booking.");
                 }
 
+                // Restriction: Cannot edit if already APPROVED or REJECTED
+                if (!"PENDING".equals(existingBooking.getStatus())) {
+                    return ResponseEntity.badRequest().body("Cannot edit a booking that has already been " + existingBooking.getStatus().toLowerCase() + ".");
+                }
+
                 ResourceEntity resource = resolveBookableResource(payload);
                 String purpose = (String) payload.get("purpose");
                 Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : existingBooking.getAttendeesCount();
