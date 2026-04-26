@@ -98,6 +98,17 @@ public class BookingController {
                 throw new IllegalArgumentException("endTime must be after startTime");
             }
 
+            // ── Time & Holiday Restrictions ──
+            if (start.toLocalTime().isAfter(java.time.LocalTime.of(22, 0)) || 
+                end.toLocalTime().isAfter(java.time.LocalTime.of(22, 1)) ||
+                (start.toLocalTime().isBefore(java.time.LocalTime.of(6, 0)))) {
+                return ResponseEntity.badRequest().body("Bookings are only allowed between 6:00 AM and 10:00 PM.");
+            }
+
+            if (isPublicHoliday(start.toLocalDate())) {
+                return ResponseEntity.badRequest().body("Bookings are not allowed on Public Holidays.");
+            }
+
             // ── Conflict Detection ──
             List<BookingEntity> conflicts = bookingRepository.findOverlappingBookings(resource.getName(), start, end);
             if (!conflicts.isEmpty()) {
@@ -266,5 +277,19 @@ public class BookingController {
             bookingRepository.delete(b);
             return ResponseEntity.ok().build();
         }).orElse(ResponseEntity.notFound().build());
+    }
+    private boolean isPublicHoliday(java.time.LocalDate date) {
+        // A simple list of hardcoded demo holidays for 2026 (or common ones)
+        // In a real app, this would fetch from a DB or external API
+        java.util.Set<java.time.LocalDate> holidays = new java.util.HashSet<>(java.util.Arrays.asList(
+            java.time.LocalDate.of(2026, 1, 1),   // New Year
+            java.time.LocalDate.of(2026, 2, 4),   // Independence Day
+            java.time.LocalDate.of(2026, 4, 13),  // Sinhala & Tamil New Year Eve
+            java.time.LocalDate.of(2026, 4, 14),  // Sinhala & Tamil New Year
+            java.time.LocalDate.of(2026, 5, 1),   // May Day
+            java.time.LocalDate.of(2026, 12, 25)  // Christmas
+        ));
+        
+        return holidays.contains(date);
     }
 }
