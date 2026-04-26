@@ -1,9 +1,23 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+ feature/sachini/incident-ticket
+import { Home, Calendar, Layout, User, Settings, LogOut, Wrench } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
+
+const NAV_ITEMS = [
+  { to: '/dashboard', icon: Home,     label: 'Dashboard'   },
+  { to: '/bookings',  icon: Calendar, label: 'My Bookings'  },
+  { to: '/tickets',   icon: Wrench,   label: 'Maintenance'  },
+  { to: '/profile',   icon: User,     label: 'Profile'      },
+  { to: '/settings',  icon: Settings, label: 'Settings'     },
+];
+
 import { Home, Calendar, Layout, User, Settings, LogOut, Building2, Wrench } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import NotificationDropdown from './NotificationDropdown';
+ main
 
 const SidebarItem = ({ to, icon: Icon, label }) => (
   <NavLink
@@ -71,12 +85,18 @@ const Sidebar = () => {
 
       {/* Nav items */}
       <nav className="flex flex-col gap-1 flex-1 overflow-y-auto pb-4">
+feature/sachini/incident-ticket
+        {NAV_ITEMS.map((item) => (
+          <SidebarItem key={item.to} {...item} />
+        ))}
+
         <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
         {isAdmin && <SidebarItem to="/resources" icon={Building2} label="Resources" />}
         <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
         <SidebarItem to="/tickets"   icon={Wrench}    label="Maintenance" />
         <SidebarItem to="/profile"   icon={User}      label="Profile"    />
         <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
+ main
       </nav>
 
       {/* User card + logout */}

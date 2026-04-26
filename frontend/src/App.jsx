@@ -62,8 +62,20 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/tickets/*" element={<TicketsMain />} />
+ feature/sachini/incident-ticket
+            <Route
+              path="/bookings"
+              element={
+                <ProtectedRoute>
+                  <Bookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+
             <Route path="/bookings" element={<Bookings />} />
             <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+ main
             <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
           </Route>
         </Routes>

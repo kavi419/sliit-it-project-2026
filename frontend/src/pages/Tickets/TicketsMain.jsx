@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import TicketsList from './TicketsList';
 import TicketDetails from './TicketDetails';
 import TicketsRoleSelector from './TicketsRoleSelector';
+import TechnicianDashboard from './TechnicianDashboard';
 
 const TicketsMain = () => {
   const [role, setRole] = useState(localStorage.getItem('mockRole'));
@@ -37,7 +38,7 @@ const TicketsMain = () => {
       )}
       <Routes>
         <Route path="/" element={<TicketsRoleSelector onSelect={handleRoleSelect} />} />
-        <Route path="/dashboard" element={<TicketsList role={role} />} />
+        <Route path="/dashboard" element={role === 'TECHNICIAN' ? <TechnicianDashboard /> : <TicketsList role={role} />} />
         <Route path="/:id" element={<TicketDetails role={role} />} />
       </Routes>
     </div>
