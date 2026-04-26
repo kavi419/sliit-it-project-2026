@@ -460,8 +460,9 @@ const Dashboard = () => {
         {activeTab === 'overview' ? (
           <motion.div 
             key="overview" 
-            initial={{ opacity: 0, y: 8 }} 
-            animate={{ opacity: 1, y: 0 }} 
+            variants={staggerContainer}
+            initial="hidden" 
+            animate="visible" 
             exit={{ opacity: 0 }}
             className="space-y-12"
           >
