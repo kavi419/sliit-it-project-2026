@@ -1,9 +1,8 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { Home, Calendar, Layout, User, Settings, LogOut, Building2, Wrench } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
-import NotificationDropdown from './NotificationDropdown';
 
 const SidebarItem = ({ to, icon: Icon, label }) => (
   <NavLink
@@ -81,9 +80,6 @@ const Sidebar = () => {
 
       {/* User card + logout */}
       <div className="p-4 border-t border-slate-100 space-y-2">
-        <div className="flex items-center justify-between px-2 pb-1">
-          <NotificationDropdown />
-        </div>
         {user && (
           <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm
