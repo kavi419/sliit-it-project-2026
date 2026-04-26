@@ -62,20 +62,6 @@ function App() {
             <Route path="/tickets/*" element={<TicketsMain />} />
             <Route
               path="/bookings"
-              element={<div className="p-10 text-2xl font-bold">Bookings Coming Soon...</div>}
-            />
-            <Route
-              path="/profile"
-              element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>}
-            />
-            <Route
-              path="/settings"
-              element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>}
-            />
-feature/sachini/incident-ticket
-
-            <Route
-              path="/bookings"
               element={
                 <ProtectedRoute>
                   <Bookings />
@@ -84,7 +70,6 @@ feature/sachini/incident-ticket
             />
             <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
             <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
-       main
           </Route>
         </Routes>
       </Router>
