@@ -112,7 +112,7 @@ const TicketsList = ({ role }) => {
           </h1>
           <p className="text-slate-500 font-medium mt-2">Manage incidents and report issues across campus.</p>
         </div>
-        {activeRole !== 'TECHNICIAN' && (
+        {activeRole !== 'TECHNICIAN' && activeRole !== 'ADMIN' && (
           <button 
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-indigo-600/20 transition-all hover:-translate-y-1"
