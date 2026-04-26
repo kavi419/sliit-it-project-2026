@@ -1,6 +1,6 @@
-package com.smartcampus.events;
+package com.springboot.smartcampus.events;
 
-import com.smartcampus.enums.NotificationType;
+import com.springboot.smartcampus.enums.NotificationType;
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
