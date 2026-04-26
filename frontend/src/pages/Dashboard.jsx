@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { 
   User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, 
-  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, PieChart as PieIcon 
+  Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, PieChart as PieIcon,
+  Plus, Ban
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -78,10 +79,12 @@ const ResourceCard = ({ resource, onBook }) => (
       <button
         onClick={() => onBook(resource)}
         disabled={resource.status !== 'Available'}
-        className="w-full mt-6 py-3 bg-white border border-indigo-100 text-indigo-600 font-bold rounded-xl
-          hover:bg-indigo-600 hover:text-white transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-indigo-600"
+        className={`w-full mt-6 py-3 font-bold rounded-xl transition-all duration-300 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed
+          ${resource.status === 'Available' 
+            ? 'bg-white border border-indigo-100 text-indigo-600 hover:bg-indigo-600 hover:text-white' 
+            : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'}`}
       >
-        {resource.status === 'Available' ? 'Book Now' : 'Currently In Use'}
+        {resource.status === 'Available' ? 'Book Now' : resource.status}
       </button>
     </div>
   </motion.div>
@@ -335,7 +338,6 @@ const Dashboard = () => {
     setDateStr(new Date().toLocaleDateString('en-US', options));
   }, []);
 
-  useEffect(() => {
     const statusLabelMap = {
       ACTIVE: 'Available',
       MAINTENANCE: 'Maintenance',
@@ -358,7 +360,9 @@ const Dashboard = () => {
         const mapped = (res.data.content || []).map((resource, idx) => ({
           id: resource.id,
           title: resource.name,
-          status: statusLabelMap[resource.status] || 'Unavailable',
+          status: (resource.status === 'ACTIVE' && resource.occupancyProgress > 0) 
+            ? 'Currently In Use' 
+            : (statusLabelMap[resource.status] || 'Unavailable'),
           image: resource.imageUrl || fallbackImages[idx % fallbackImages.length],
           location: resource.location,
           capacity: resource.capacity,
@@ -378,9 +382,8 @@ const Dashboard = () => {
     const fetchBookings = async () => {
       setLoadingBookings(true);
       try {
-        // Always fetch the current user's own bookings for the personal dashboard view.
-        // Admins can see all bookings on the /bookings page.
-        const res = await api.get('/api/bookings/my');
+        const url = isAdmin ? '/api/bookings' : '/api/bookings/my';
+        const res = await api.get(url);
         setBookings(res.data || []);
       } catch (err) {
         console.error('Failed to load bookings:', err);
@@ -389,9 +392,10 @@ const Dashboard = () => {
       }
     };
 
-    fetchResources();
-    fetchBookings();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => {
+      fetchResources();
+      fetchBookings();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const staggerContainer = {
     hidden: {},
@@ -454,7 +458,14 @@ const Dashboard = () => {
       {/* ── Tab Content ── */}
       <AnimatePresence mode="wait">
         {activeTab === 'overview' ? (
-          <motion.div key="overview" className="space-y-12">
+          <motion.div 
+            key="overview" 
+            variants={staggerContainer}
+            initial="hidden" 
+            animate="visible" 
+            exit={{ opacity: 0 }}
+            className="space-y-12"
+          >
             {/* ... rest of the overview content ... */}
 
             {/* Admin or Student Panel */}
@@ -528,15 +539,28 @@ const Dashboard = () => {
               </motion.section>
             )}
 
-            {/* Resources */}
             <motion.section variants={sectionVariant}>
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
-                <div className="flex gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-200" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                <div className="flex flex-col">
+                  <h3 className="text-xl font-extrabold text-slate-800 tracking-tight">Available Resources</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Explore labs, rooms and event spaces</p>
                 </div>
+                
+                {isAdmin ? (
+                  <button 
+                    onClick={() => navigate('/resources', { state: { action: 'add' } })}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add New Resource
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-200" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {loadingResources && (
@@ -591,29 +615,55 @@ const Dashboard = () => {
                     bookings.slice(0, 5).map((booking) => (
                       <div 
                         key={booking.id} 
-                        onClick={() => navigate('/bookings')}
-                        className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-all cursor-pointer group"
+                        className="p-6 flex items-center justify-between hover:bg-slate-50/50 transition-all group border-b border-slate-50 last:border-0"
                       >
-                        <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-5 cursor-pointer" onClick={() => navigate('/bookings')}>
                           <div className="h-12 w-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:scale-110 transition-transform">
                             <Calendar className="w-6 h-6" />
                           </div>
                           <div>
                             <p className="font-bold text-slate-900 tracking-tight">{booking.resourceName}</p>
-                            <p className="text-slate-400 font-medium mt-0.5 text-sm">
-                              {new Date(booking.startTime).toLocaleDateString()} • {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                            <div className="flex flex-col">
+                              <p className="text-slate-400 font-medium mt-0.5 text-xs">
+                                {new Date(booking.startTime).toLocaleDateString()} • {new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                              {isAdmin && (
+                                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-tighter mt-0.5">
+                                  User: {booking.userEmail || booking.user?.email}
+                                </p>
+                              )}
+                            </div>
                           </div>
                         </div>
+                        
                         <div className="flex items-center gap-3">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                            booking.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
-                            booking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
-                            'bg-slate-100 text-slate-600'
-                          }`}>
-                            {booking.status}
-                          </span>
-                          <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all" />
+                          {isAdmin && booking.status === 'PENDING' ? (
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => navigate('/bookings', { state: { action: 'approve', bookingId: booking.id } })}
+                                className="p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                title="Approve"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                              <button 
+                                onClick={() => navigate('/bookings', { state: { action: 'reject', bookingId: booking.id } })}
+                                className="p-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                title="Reject"
+                              >
+                                <Ban className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                              booking.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-700' :
+                              booking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {booking.status}
+                            </span>
+                          )}
+                          <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 group-hover:translate-x-1 transition-all cursor-pointer" onClick={() => navigate('/bookings')} />
                         </div>
                       </div>
                     ))
@@ -653,9 +703,12 @@ const Dashboard = () => {
 
       <BookingModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => { setIsModalOpen(false); setSelectedResource(null); }}
         selectedResource={selectedResource}
-        onBookingSuccess={() => alert('Booking created successfully!')}
+        onBookingSuccess={() => {
+          fetchBookings();
+          fetchResources();
+        }}
       />
     </motion.div>
   );

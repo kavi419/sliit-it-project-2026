@@ -56,7 +56,14 @@ export const AuthProvider = ({ children }) => {
               setUser(fresh);
             }
           })
-          .catch(() => { /* silent — cached data is good enough */ })
+          .catch(err => {
+            // If the server explicitly says Unauthorized/Forbidden, our session is dead.
+            // Clear it so the user is forced to log in again.
+            if (err.response?.status === 401 || err.response?.status === 403) {
+              sessionStorage.removeItem(SESSION_KEY);
+              setUser(null);
+            }
+          })
           .finally(() => setLoading(false));
 
         return; // don't fall through to the unauthenticated fetch below

@@ -57,7 +57,11 @@ const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess, boo
           const preselectedId = selectedResource?.id ? String(selectedResource.id) : null;
           const fallbackFirst = mapped[0]?.id || '';
           setResourceId(preselectedId || fallbackFirst);
-          setDate('');
+          
+          // Pre-fill today's date
+          const today = new Date().toISOString().split('T')[0];
+          setDate(today);
+          
           setStartTime('');
           setEndTime('');
           setPurpose('');

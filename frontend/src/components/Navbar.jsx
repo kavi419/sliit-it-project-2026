@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, Search, Shield, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import NotificationDropdown from './NotificationDropdown';
 
 const Navbar = () => {
   const { user } = useAuth();
@@ -50,16 +51,7 @@ const Navbar = () => {
         )}
 
         {/* Notifications */}
-        <div className="relative">
-          <button
-            id="navbar-notifications"
-            className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center
-              text-slate-500 hover:text-slate-700 transition-all duration-200"
-          >
-            <Bell className="w-4 h-4" />
-          </button>
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
-        </div>
+        <NotificationDropdown />
 
         {/* Divider */}
         <div className="w-px h-6 bg-slate-200" />
