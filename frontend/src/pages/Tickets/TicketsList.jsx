@@ -84,6 +84,9 @@ const TicketsList = ({ role }) => {
   const isOwner = (ticket) => {
     if (!user || !ticket) return false;
 
+    // Admins can manage all tickets
+    if (user.role === 'ADMIN') return true;
+
     // If fetching their own tickets, they are the owner
     if (activeRole === 'USER' || activeRole === 'STUDENT' || filter === 'MY') {
       return true;

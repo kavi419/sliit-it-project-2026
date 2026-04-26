@@ -165,9 +165,8 @@ const TicketDetails = ({ role }) => {
     activeRole === 'USER' || activeRole === 'STUDENT'
   );
   
-  // Restriction: Only the original reporter (Owner) can manage tickets (Edit/Delete). 
-  // Administrators do NOT have access to these buttons.
-  const canManageTicket = ticket && user && isOwner;
+  // Restriction: Only the original reporter (Owner) or Administrators can manage tickets (Edit/Delete). 
+  const canManageTicket = ticket && user && (isOwner || user.role === 'ADMIN');
 
   if (loading) {
     return (
