@@ -138,14 +138,19 @@ const TicketDetails = ({ role }) => {
     }
   };
 
-  const handleClose = async () => {
+  const handleStatusChange = async (newStatus) => {
     try {
-        await api.patch(`/api/tickets/${id}/status`, { status: 'CLOSED' });
-        fetchDetails();
+      await api.patch(`/api/tickets/${id}/status`, { status: newStatus });
+      fetchDetails();
     } catch (err) {
-        console.error(err);
+      console.error(err);
+      alert('Failed to update ticket status.');
     }
-  }
+  };
+
+  const handleClose = async () => {
+    handleStatusChange('CLOSED');
+  };
 
   const handleDelete = async () => {
     if (!window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) return;
@@ -193,7 +198,27 @@ const TicketDetails = ({ role }) => {
               <div>
                 <div className="flex items-center gap-4 mb-3">
                   <span className="text-sm font-black text-indigo-400 font-mono bg-indigo-50 px-3 py-1 rounded-lg">{ticket.ticketCode}</span>
-                  <StatusBadge status={ticket.status} />
+                  {activeRole === 'ADMIN' ? (
+                    <select 
+                      value={ticket.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border outline-none cursor-pointer hover:opacity-80 transition-opacity appearance-none text-center ${
+                        ticket.status === 'OPEN' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        ticket.status === 'IN_PROGRESS' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        ticket.status === 'RESOLVED' ? 'bg-blue-100 text-blue-700 border-blue-200' :
+                        ticket.status === 'CLOSED' ? 'bg-slate-100 text-slate-700 border-slate-200' :
+                        'bg-red-100 text-red-700 border-red-200'
+                      }`}
+                    >
+                      <option value="OPEN">OPEN</option>
+                      <option value="IN_PROGRESS">IN PROGRESS</option>
+                      <option value="RESOLVED">RESOLVED</option>
+                      <option value="CLOSED">CLOSED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  ) : (
+                    <StatusBadge status={ticket.status} />
+                  )}
                 </div>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tight">{ticket.title}</h1>
               </div>
