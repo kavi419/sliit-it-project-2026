@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Calendar, Clock, MapPin, CheckCircle, Clock3, Trash2, Edit2, X, Loader2, Users, Info, Check, Ban, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BookingModal from '../components/BookingModal';
@@ -7,6 +8,8 @@ import api from '../utils/axiosConfig';
 
 const Bookings = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
     const isAdmin = user?.role === 'ADMIN';
 
     const [bookings, setBookings] = useState([]);
@@ -39,6 +42,22 @@ const Bookings = () => {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (!loading && bookings.length > 0 && location.state?.action && location.state?.bookingId) {
+            const booking = bookings.find(b => b.id === location.state.bookingId);
+            if (booking && booking.status === 'PENDING') {
+                setActionModal({ 
+                    isOpen: true, 
+                    booking, 
+                    type: location.state.action, 
+                    reason: '' 
+                });
+                // Clear state to avoid reopening on refresh
+                window.history.replaceState({}, document.title);
+            }
+        }
+    }, [bookings, loading, location.state]);
 
     const handleAction = async () => {
         if (!actionModal.booking) return;

@@ -1,0 +1,124 @@
+package com.smartcampus.config;
+
+import com.smartcampus.enums.ResourceStatus;
+import com.smartcampus.model.ResourceEntity;
+import com.smartcampus.repository.ResourceRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Configuration;
+
+import java.time.LocalTime;
+import java.util.Arrays;
+
+@Configuration
+@RequiredArgsConstructor
+public class DataInitializer implements CommandLineRunner {
+
+    private final ResourceRepository resourceRepository;
+    private final com.smartcampus.repository.UserRepository userRepository;
+    private final com.smartcampus.repository.BookingRepository bookingRepository;
+    private final com.smartcampus.repository.TicketRepository ticketRepository;
+
+    @Override
+    public void run(String... args) throws Exception {
+        if (resourceRepository.count() == 0) {
+            ResourceEntity lab1 = ResourceEntity.builder()
+                    .name("Main Computer Lab")
+                    .type("Lab")
+                    .capacity(50)
+                    .location("Block A, Level 2")
+                    .status(ResourceStatus.ACTIVE)
+                    .availableFrom(LocalTime.of(8, 0))
+                    .availableTo(LocalTime.of(18, 0))
+                    .imageUrl("https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&q=80&w=800")
+                    .description("High-performance computing lab for advanced projects.")
+                    .build();
+
+            ResourceEntity room1 = ResourceEntity.builder()
+                    .name("Study Room 101")
+                    .type("Study Room")
+                    .capacity(6)
+                    .location("Library, Level 1")
+                    .status(ResourceStatus.ACTIVE)
+                    .availableFrom(LocalTime.of(7, 0))
+                    .availableTo(LocalTime.of(22, 0))
+                    .imageUrl("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800")
+                    .description("Quiet study space for small groups.")
+                    .build();
+
+            ResourceEntity auditorium = ResourceEntity.builder()
+                    .name("Main Auditorium")
+                    .type("Auditorium")
+                    .capacity(300)
+                    .location("Block B, Ground Floor")
+                    .status(ResourceStatus.ACTIVE)
+                    .availableFrom(LocalTime.of(8, 0))
+                    .availableTo(LocalTime.of(20, 0))
+                    .imageUrl("https://images.unsplash.com/photo-1505373633560-eb0a6f2a5100?auto=format&fit=crop&q=80&w=800")
+                    .description("Large space for events and guest lectures.")
+                    .build();
+
+            resourceRepository.saveAll(Arrays.asList(lab1, room1, auditorium));
+        }
+
+        // 1. Seed a System User if not exists
+        com.smartcampus.model.UserEntity systemUser = userRepository.findByEmail("system@smartcampus.com")
+                .orElseGet(() -> {
+                    com.smartcampus.model.UserEntity u = com.smartcampus.model.UserEntity.builder()
+                            .email("system@smartcampus.com")
+                            .name("System Demo")
+                            .role("STUDENT")
+                            .status("ACTIVE")
+                            .build();
+                    return userRepository.save(u);
+                });
+
+        // 2. Seed a Pending Admin for the User Management table
+        if (userRepository.findByEmail("pending.admin@test.com").isEmpty()) {
+            userRepository.save(com.smartcampus.model.UserEntity.builder()
+                    .email("pending.admin@test.com")
+                    .name("Jane Doe (Pending)")
+                    .role("ADMIN")
+                    .status("PENDING_ADMIN")
+                    .build());
+        }
+
+        // 3. Seed some Sample Bookings if empty
+        if (bookingRepository.count() == 0) {
+            ResourceEntity lab = resourceRepository.findAll().get(0);
+            bookingRepository.save(com.smartcampus.model.BookingEntity.builder()
+                    .user(systemUser)
+                    .resourceName(lab.getName())
+                    .purpose("Group Project Meeting")
+                    .attendeesCount(4)
+                    .startTime(java.time.LocalDateTime.now().minusHours(1))
+                    .endTime(java.time.LocalDateTime.now().plusHours(2))
+                    .status("APPROVED")
+                    .build());
+            
+            bookingRepository.save(com.smartcampus.model.BookingEntity.builder()
+                    .user(systemUser)
+                    .resourceName("Study Room 101")
+                    .purpose("Individual Study")
+                    .attendeesCount(1)
+                    .startTime(java.time.LocalDateTime.now().plusDays(1))
+                    .endTime(java.time.LocalDateTime.now().plusDays(1).plusHours(2))
+                    .status("PENDING")
+                    .build());
+        }
+
+        // 4. Seed some Sample Tickets if empty
+        if (ticketRepository.count() == 0) {
+            ticketRepository.save(com.smartcampus.model.TicketEntity.builder()
+                    .ticketCode("TCK-DEMO-01")
+                    .title("Projector Not Working")
+                    .description("The projector in Lab A is not turning on. Tried different cables.")
+                    .category(com.smartcampus.enums.TicketCategory.EQUIPMENT)
+                    .priority(com.smartcampus.enums.TicketPriority.HIGH)
+                    .status(com.smartcampus.enums.TicketStatus.OPEN)
+                    .location("Block A, Level 2")
+                    .createdBy(systemUser)
+                    .build());
+        }
+    }
+}

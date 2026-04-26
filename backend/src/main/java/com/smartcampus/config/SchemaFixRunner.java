@@ -29,8 +29,8 @@ public class SchemaFixRunner implements ApplicationRunner {
 
         // Make google_sub nullable — email/password users have no Google sub claim
         runSafe(
-            "ALTER TABLE app_users ALTER COLUMN google_sub DROP NOT NULL",
-            "google_sub → nullable"
+            "ALTER TABLE app_users ALTER COLUMN google_id DROP NOT NULL",
+            "google_id → nullable"
         );
 
         // Make updated_at nullable — avoids NOT NULL violation on insert

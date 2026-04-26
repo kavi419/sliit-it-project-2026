@@ -6,9 +6,15 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Custom OAuth2 user service — saves/updates users in app_users on every Google login.
@@ -70,7 +76,7 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
             } else {
                 System.out.println("Existing user logged in: " + email);
             }
-            return oAuth2User;
+            return buildOAuth2User(oAuth2User, existingUser.getRole());
         }
 
         // Step 3: New user — build from Google attributes only
@@ -93,6 +99,17 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
             e.printStackTrace();
         }
 
-        return oAuth2User;
+        return buildOAuth2User(oAuth2User, targetRole);
+    }
+
+    private OAuth2User buildOAuth2User(OAuth2User baseUser, String role) {
+        Set<GrantedAuthority> authorities = new HashSet<>(baseUser.getAuthorities());
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        
+        return new DefaultOAuth2User(
+            authorities, 
+            baseUser.getAttributes(), 
+            "sub"
+        );
     }
 }

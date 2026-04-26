@@ -92,7 +92,7 @@ feature/sachini/incident-ticket
 
         <SidebarItem to="/dashboard" icon={Home}     label="Dashboard"  />
         {isAdmin && <SidebarItem to="/resources" icon={Building2} label="Resources" />}
-        <SidebarItem to="/bookings"  icon={Calendar}  label="My Bookings" />
+        <SidebarItem to="/bookings"  icon={Calendar}  label={isAdmin ? "Bookings" : "My Bookings"} />
         <SidebarItem to="/tickets"   icon={Wrench}    label="Maintenance" />
         <SidebarItem to="/profile"   icon={User}      label="Profile"    />
         <SidebarItem to="/settings"  icon={Settings}  label="Settings"   />
