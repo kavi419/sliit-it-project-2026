@@ -41,7 +41,15 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
         System.out.println("Email     : " + email);
         System.out.println("Name      : " + name);
 
-        boolean isAdmin = email != null && email.startsWith("kavindunethmina");
+        java.util.Set<String> adminEmails = java.util.Set.of(
+            "Sachininisansala320@gmail.com",
+            "shakyasandali039@gmail.com"
+        );
+
+        boolean isAdmin = email != null && (
+            email.toLowerCase().startsWith("kavindunethmina") || 
+            adminEmails.stream().anyMatch(e -> e.equalsIgnoreCase(email))
+        );
         String targetRole = isAdmin ? "ADMIN" : "STUDENT";
 
         // Step 2: Check if user already exists
