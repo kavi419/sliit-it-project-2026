@@ -69,6 +69,10 @@ public class OAuth2UserService extends DefaultOAuth2UserService {
                 existingUser.setRole("ADMIN");
                 needsUpdate = true;
                 System.out.println("Upgraded existing user to ADMIN role: " + email);
+            } else if (!isAdmin && "ADMIN".equals(existingUser.getRole())) {
+                existingUser.setRole("STUDENT");
+                needsUpdate = true;
+                System.out.println("Demoted existing user to STUDENT role: " + email);
             }
 
             if (needsUpdate) {

@@ -22,11 +22,21 @@ public class BackendApplication {
 			);
 			
 			userRepository.findAll().forEach(u -> {
-				if (u.getEmail().toLowerCase().startsWith("kavindunethmina") || 
-					adminEmails.stream().anyMatch(e -> e.equalsIgnoreCase(u.getEmail()))) {
-					u.setRole("ADMIN");
-					userRepository.save(u);
-					System.out.println("Ensured ADMIN role for: " + u.getEmail());
+				boolean isAuthorized = u.getEmail().toLowerCase().startsWith("kavindunethmina") || 
+					adminEmails.stream().anyMatch(e -> e.equalsIgnoreCase(u.getEmail()));
+				
+				if (isAuthorized) {
+					if (!"ADMIN".equals(u.getRole())) {
+						u.setRole("ADMIN");
+						userRepository.save(u);
+						System.out.println("Ensured ADMIN role for: " + u.getEmail());
+					}
+				} else {
+					if ("ADMIN".equals(u.getRole())) {
+						u.setRole("STUDENT");
+						userRepository.save(u);
+						System.out.println("Demoted unauthorized ADMIN to STUDENT: " + u.getEmail());
+					}
 				}
 			});
 		};
