@@ -117,6 +117,11 @@ public class BookingController {
                 return ResponseEntity.badRequest().body("Bookings are not allowed on Public Holidays.");
             }
 
+            // ── Past Date/Time Check ──
+            if (start.isBefore(java.time.LocalDateTime.now())) {
+                return ResponseEntity.badRequest().body("Cannot create a booking for a past date or time.");
+            }
+
             // ── Conflict Detection ──
             List<BookingEntity> conflicts = bookingRepository.findOverlappingBookings(resource.getName(), start, end);
             if (!conflicts.isEmpty()) {
