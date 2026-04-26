@@ -11,8 +11,21 @@ api.defaults.withCredentials = true;
 // This is used by ResourceController.ensureAdmin() to allow test/unit test access.
 api.interceptors.request.use(
   (config) => {
+    // Inject mock headers from the actual logged-in user to prevent stale backend sessions
+    try {
+      const userStr = sessionStorage.getItem('sc_user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.email) config.headers['X-Mock-Email'] = user.email;
+        if (user.role) config.headers['X-Mock-Role'] = user.role;
+      }
+    } catch (e) {
+      // ignore parsing errors
+    }
+    
+    // Fallback to explicit localStorage mockRole if no session exists
     const mockRole = localStorage.getItem('mockRole');
-    if (mockRole) {
+    if (mockRole && !config.headers['X-Mock-Role']) {
       config.headers['X-Mock-Role'] = mockRole;
     }
     return config;

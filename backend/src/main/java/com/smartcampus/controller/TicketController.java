@@ -26,6 +26,22 @@ public class TicketController {
     private final HttpServletRequest request;
 
     private UserEntity getAuthenticatedUser(Authentication authentication) {
+        // Prioritize explicit frontend headers to prevent stale JSESSIONID cookies from causing out-of-sync users
+        String mockEmail = request.getHeader("X-Mock-Email");
+        String mockRole = request.getHeader("X-Mock-Role");
+
+        if (mockEmail != null && !mockEmail.isEmpty()) {
+            UserEntity testUser = userRepository.findByEmail(mockEmail).orElse(null);
+            if (testUser == null) {
+                testUser = new UserEntity();
+                testUser.setName("Mock " + (mockRole != null ? mockRole : "USER"));
+                testUser.setEmail(mockEmail);
+                testUser.setRole(mockRole != null ? mockRole.toUpperCase() : "USER");
+                testUser = userRepository.save(testUser);
+            }
+            return testUser;
+        }
+
         if (authentication != null && authentication.getPrincipal() instanceof OAuth2User) {
             String email = ((OAuth2User) authentication.getPrincipal()).getAttribute("email");
             return userRepository.findByEmail(email)
@@ -35,17 +51,15 @@ public class TicketController {
             return userRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("User not found in database"));
         } else {
-            // Fallback for local testing without Google OAuth or when not authenticated properly
-            String mockRole = request.getHeader("X-Mock-Role");
+            // Fallback
             if (mockRole == null) mockRole = "USER";
-            
-            String mockEmail = mockRole.toLowerCase() + "@test.com";
+            String defaultMockEmail = mockRole.toLowerCase() + "@test.com";
 
-            UserEntity testUser = userRepository.findByEmail(mockEmail).orElse(null);
+            UserEntity testUser = userRepository.findByEmail(defaultMockEmail).orElse(null);
             if (testUser == null) {
                 testUser = new UserEntity();
                 testUser.setName("Mock " + mockRole);
-                testUser.setEmail(mockEmail);
+                testUser.setEmail(defaultMockEmail);
                 testUser.setRole(mockRole.toUpperCase());
                 testUser = userRepository.save(testUser);
             }
