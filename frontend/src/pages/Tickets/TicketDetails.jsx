@@ -284,12 +284,18 @@ const TicketDetails = ({ role }) => {
                           <div className={`flex flex-col gap-1 ${isCommentAuthor ? 'items-end' : 'items-start'}`}>
                             {!isCommentAuthor && (
                                <div className="flex items-center gap-2 ml-1">
-                                 <span className="text-slate-400 text-[11px] font-medium">{comment.authorName}</span>
+                                 <span className="text-slate-400 text-[11px] font-medium">
+                                   {comment.authorName === ticket.createdBy ? comment.authorName : 
+                                    comment.authorName === ticket.assignedTechnician ? 'Technician' : 'Admin'}
+                                 </span>
                                  {comment.authorName === ticket.createdBy && (
                                    <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Reporter</span>
                                  )}
                                  {comment.authorName === ticket.assignedTechnician && (
                                    <span className="text-[8px] bg-amber-100 text-amber-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Tech</span>
+                                 )}
+                                 {comment.authorName !== ticket.createdBy && comment.authorName !== ticket.assignedTechnician && (
+                                   <span className="text-[8px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded-sm font-bold uppercase tracking-wider">Admin</span>
                                  )}
                                </div>
                             )}

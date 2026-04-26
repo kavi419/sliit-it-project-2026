@@ -46,17 +46,24 @@ public class DashboardController {
     @GetMapping("/api/user/me")
     public ResponseEntity<Map<String, Object>> userMe(
             @AuthenticationPrincipal OAuth2User oauthUser,
-            @RequestParam(required = false) String email) {
+            @RequestParam(required = false) String email,
+            jakarta.servlet.http.HttpServletRequest request) {
 
-        // Priority 1: OAuth2 session in Spring Security context
+        // Priority 1: Explicit mock headers from frontend
+        String mockEmail = request.getHeader("X-Mock-Email");
+        if (mockEmail != null && !mockEmail.isBlank()) {
+            return buildUserResponse(mockEmail.trim().toLowerCase(), Map.of());
+        }
+
+        // Priority 2: explicit email param (used by frontend mock login to bypass stale sessions)
+        if (email != null && !email.isBlank()) {
+            return buildUserResponse(email.trim().toLowerCase(), Map.of());
+        }
+
+        // Priority 3: OAuth2 session in Spring Security context
         if (oauthUser != null) {
             String oauthEmail = oauthUser.getAttribute("email");
             return buildUserResponse(oauthEmail, oauthUser.getAttributes());
-        }
-
-        // Priority 2: explicit email param (email/password users)
-        if (email != null && !email.isBlank()) {
-            return buildUserResponse(email.trim().toLowerCase(), Map.of());
         }
 
         return ResponseEntity.status(401).build();
