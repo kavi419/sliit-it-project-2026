@@ -3,7 +3,6 @@ package com.springboot.smartcampus.service.impl;
 import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.DashboardService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
@@ -14,10 +13,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
 
     private final UserRepository userRepository;
+
+    public DashboardServiceImpl(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @Override
     public ResponseEntity<Map<String, Object>> getDashboardData(OAuth2User oauthUser) {

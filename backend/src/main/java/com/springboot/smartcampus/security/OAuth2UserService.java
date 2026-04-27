@@ -2,7 +2,6 @@ package com.springboot.smartcampus.security;
 
 import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -20,10 +19,13 @@ import java.util.Set;
  * Custom OAuth2 user service — saves/updates users in app_users on every Google login.
  */
 @Service
-@RequiredArgsConstructor
 public class OAuth2UserService extends DefaultOAuth2UserService {
 
     private final UserRepository userRepository;
+
+    public OAuth2UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @Override
     @Transactional

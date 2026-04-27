@@ -1,7 +1,6 @@
 package com.springboot.smartcampus.controller;
 
 import com.springboot.smartcampus.service.DashboardService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -11,11 +10,14 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class DashboardController {
 
     private final DashboardService dashboardService;
+
+    public DashboardController(DashboardService dashboardService) {
+        this.dashboardService = dashboardService;
+    }
 
     @GetMapping("/api/dashboard")
     public ResponseEntity<Map<String, Object>> dashboard(@AuthenticationPrincipal OAuth2User oauthUser) {

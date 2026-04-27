@@ -4,7 +4,6 @@ import com.springboot.smartcampus.dto.*;
 import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.TicketService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -17,39 +16,44 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/tickets")
-@RequiredArgsConstructor
 public class TicketController {
 
     private final TicketService ticketService;
     private final UserRepository userRepository;
     private final HttpServletRequest request;
 
-    private User getAuthenticatedUser(OAuth2User oauth2User) {
-        if (oauth2User == null) {
-    String mockRole = request.getHeader("X-Mock-Role");
-    String mockName = request.getHeader("X-Mock-Name");
-    String mockEmail = request.getHeader("X-Mock-Email");
-
-    if (mockRole == null) mockRole = "STUDENT";
-    if (mockName == null) mockName = "Student User";
-    if (mockEmail == null) mockEmail = "student@test.com";
-
-    User testUser = userRepository.findByEmail(mockEmail).orElse(null);
-
-    if (testUser == null) {
-        testUser = new User();
-        testUser.setName(mockName);
-        testUser.setEmail(mockEmail);
-        testUser.setRole(mockRole.toUpperCase());
-        testUser = userRepository.save(testUser);
-    } else {
-        testUser.setName(mockName);
-        testUser.setRole(mockRole.toUpperCase());
-        testUser = userRepository.save(testUser);
+    public TicketController(TicketService ticketService, UserRepository userRepository, HttpServletRequest request) {
+        this.ticketService = ticketService;
+        this.userRepository = userRepository;
+        this.request = request;
     }
 
-    return testUser;
-}
+    private User getAuthenticatedUser(OAuth2User oauth2User) {
+        if (oauth2User == null) {
+            String mockRole = request.getHeader("X-Mock-Role");
+            String mockName = request.getHeader("X-Mock-Name");
+            String mockEmail = request.getHeader("X-Mock-Email");
+
+            if (mockRole == null) mockRole = "STUDENT";
+            if (mockName == null) mockName = "Student User";
+            if (mockEmail == null) mockEmail = "student@test.com";
+
+            User testUser = userRepository.findByEmail(mockEmail).orElse(null);
+
+            if (testUser == null) {
+                testUser = new User();
+                testUser.setName(mockName);
+                testUser.setEmail(mockEmail);
+                testUser.setRole(mockRole.toUpperCase());
+                testUser = userRepository.save(testUser);
+            } else {
+                testUser.setName(mockName);
+                testUser.setRole(mockRole.toUpperCase());
+                testUser = userRepository.save(testUser);
+            }
+
+            return testUser;
+        }
         String email = oauth2User.getAttribute("email");
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found in database"));
@@ -96,24 +100,24 @@ public class TicketController {
     }
 
     @PutMapping("/{id}")
-public ResponseEntity<TicketResponse> updateTicket(
-        @AuthenticationPrincipal OAuth2User oauth2User,
-        @PathVariable String id,
-        @RequestBody CreateTicketRequest request) {
+    public ResponseEntity<TicketResponse> updateTicket(
+            @AuthenticationPrincipal OAuth2User oauth2User,
+            @PathVariable String id,
+            @RequestBody CreateTicketRequest request) {
 
-    User user = getAuthenticatedUser(oauth2User);
-    return ResponseEntity.ok(ticketService.updateTicket(id, request, user.getId(), user.getRole()));
-}
+        User user = getAuthenticatedUser(oauth2User);
+        return ResponseEntity.ok(ticketService.updateTicket(id, request, user.getId(), user.getRole()));
+    }
 
-@DeleteMapping("/{id}")
-public ResponseEntity<Void> deleteTicket(
-        @AuthenticationPrincipal OAuth2User oauth2User,
-        @PathVariable String id) {
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTicket(
+            @AuthenticationPrincipal OAuth2User oauth2User,
+            @PathVariable String id) {
 
-    User user = getAuthenticatedUser(oauth2User);
-    ticketService.deleteTicket(id, user.getId(), user.getRole());
-    return ResponseEntity.noContent().build();
-}
+        User user = getAuthenticatedUser(oauth2User);
+        ticketService.deleteTicket(id, user.getId(), user.getRole());
+        return ResponseEntity.noContent().build();
+    }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<TicketResponse> updateStatus(
@@ -141,8 +145,6 @@ public ResponseEntity<Void> deleteTicket(
         getAuthenticatedUser(oauth2User);
         return ResponseEntity.ok(ticketService.resolveTicket(id, request));
     }
-
-    
 
     @PostMapping("/{id}/comments")
     public ResponseEntity<TicketCommentResponse> addComment(

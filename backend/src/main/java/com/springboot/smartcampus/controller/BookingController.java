@@ -1,7 +1,6 @@
 package com.springboot.smartcampus.controller;
 
 import com.springboot.smartcampus.service.BookingService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,11 +11,14 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bookings")
-@RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class BookingController {
 
     private final BookingService bookingService;
+
+    public BookingController(BookingService bookingService) {
+        this.bookingService = bookingService;
+    }
 
     private String getAuthEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

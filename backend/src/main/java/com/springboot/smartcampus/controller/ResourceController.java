@@ -9,7 +9,6 @@ import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.ResourceService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
@@ -20,13 +19,18 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/resources")
-@RequiredArgsConstructor
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 public class ResourceController {
 
     private final ResourceService resourceService;
     private final UserRepository userRepository;
     private final HttpServletRequest httpServletRequest;
+
+    public ResourceController(ResourceService resourceService, UserRepository userRepository, HttpServletRequest httpServletRequest) {
+        this.resourceService = resourceService;
+        this.userRepository = userRepository;
+        this.httpServletRequest = httpServletRequest;
+    }
 
     @GetMapping
     public ResponseEntity<Page<ResourceResponse>> searchResources(

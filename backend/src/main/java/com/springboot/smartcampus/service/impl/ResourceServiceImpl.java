@@ -9,7 +9,6 @@ import com.springboot.smartcampus.repository.ResourceRepository;
 import com.springboot.smartcampus.repository.BookingRepository;
 import com.springboot.smartcampus.service.ResourceService;
 import jakarta.persistence.criteria.Predicate;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
@@ -20,11 +19,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceRepository resourceRepository;
     private final BookingRepository bookingRepository;
+
+    public ResourceServiceImpl(ResourceRepository resourceRepository, BookingRepository bookingRepository) {
+        this.resourceRepository = resourceRepository;
+        this.bookingRepository = bookingRepository;
+    }
 
     @Override
     public Page<ResourceResponse> searchResources(String query, String type, Integer minCapacity, Integer maxCapacity, String location, ResourceStatus status, Pageable pageable) {

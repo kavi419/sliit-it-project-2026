@@ -3,7 +3,6 @@ package com.springboot.smartcampus.service.impl;
 import com.springboot.smartcampus.repository.BookingRepository;
 import com.springboot.smartcampus.repository.ResourceRepository;
 import com.springboot.smartcampus.service.AnalyticsService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -13,11 +12,15 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final BookingRepository bookingRepository;
     private final ResourceRepository resourceRepository;
+
+    public AnalyticsServiceImpl(BookingRepository bookingRepository, ResourceRepository resourceRepository) {
+        this.bookingRepository = bookingRepository;
+        this.resourceRepository = resourceRepository;
+    }
 
     @Override
     public ResponseEntity<Map<String, Object>> getResourceUsage() {

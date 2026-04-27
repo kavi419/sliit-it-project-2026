@@ -3,7 +3,6 @@ package com.springboot.smartcampus.security;
 import com.springboot.smartcampus.enums.ResourceStatus;
 import com.springboot.smartcampus.model.Resource;
 import com.springboot.smartcampus.repository.ResourceRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 
@@ -11,13 +10,22 @@ import java.time.LocalTime;
 import java.util.Arrays;
 
 @Configuration
-@RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
     private final ResourceRepository resourceRepository;
     private final com.springboot.smartcampus.repository.UserRepository userRepository;
     private final com.springboot.smartcampus.repository.BookingRepository bookingRepository;
     private final com.springboot.smartcampus.repository.TicketRepository ticketRepository;
+
+    public DataInitializer(ResourceRepository resourceRepository, 
+                           com.springboot.smartcampus.repository.UserRepository userRepository,
+                           com.springboot.smartcampus.repository.BookingRepository bookingRepository,
+                           com.springboot.smartcampus.repository.TicketRepository ticketRepository) {
+        this.resourceRepository = resourceRepository;
+        this.userRepository = userRepository;
+        this.bookingRepository = bookingRepository;
+        this.ticketRepository = ticketRepository;
+    }
 
     @Override
     public void run(String... args) throws Exception {

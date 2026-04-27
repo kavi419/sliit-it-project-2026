@@ -3,8 +3,7 @@ package com.springboot.smartcampus.controller;
 import com.springboot.smartcampus.dto.NotificationDTO;
 import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
-import com.springboot.smartcampus.service.impl.NotificationServiceImpl;
-import lombok.RequiredArgsConstructor;
+import com.springboot.smartcampus.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,11 +14,15 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/notifications")
-@RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationServiceImpl notificationService;
+    private final NotificationService notificationService;
     private final UserRepository userRepository;
+
+    public NotificationController(NotificationService notificationService, UserRepository userRepository) {
+        this.notificationService = notificationService;
+        this.userRepository = userRepository;
+    }
 
     // Helper method to get the current logged-in user's ID using both OAuth and Username/Password methods
     private Long getCurrentUserId() {
@@ -76,6 +79,4 @@ public class NotificationController {
         notificationService.deleteNotification(id, userId);
         return ResponseEntity.ok().build();
     }
-
-
 }
