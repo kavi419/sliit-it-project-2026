@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
@@ -35,6 +34,13 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final SecurityContextRepository securityContextRepository;
     private final NotificationService notificationService;
+
+    public AuthServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder, SecurityContextRepository securityContextRepository, NotificationService notificationService) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.securityContextRepository = securityContextRepository;
+        this.notificationService = notificationService;
+    }
 
     @Override
     public ResponseEntity<Boolean> checkEmailExists(Map<String, String> request) {

@@ -35,16 +35,26 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const RootRedirect = () => {
+  const { user } = useAuth();
+  if (user?.role === 'TECHNICIAN') return <Navigate to="/tickets/dashboard" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
 function App() {
   return (
     <AuthProvider>
       <NotificationProvider>
         <Router>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Default route */}
+            <Route path="/" element={<RootRedirect />} />
+
+            {/* Public routes */}
             <Route path="/login" element={<ModernLogin />} />
             <Route path="/waiting" element={<WaitingPage />} />
 
+            {/* Protected routes — all wrapped by MainLayout */}
             <Route
               element={
                 <ProtectedRoute>

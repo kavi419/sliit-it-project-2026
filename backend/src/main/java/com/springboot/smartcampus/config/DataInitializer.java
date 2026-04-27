@@ -1,4 +1,4 @@
-package com.springboot.smartcampus.config;
+package com.springboot.smartcampus.security;
 
 import com.springboot.smartcampus.enums.ResourceStatus;
 import com.springboot.smartcampus.model.Resource;

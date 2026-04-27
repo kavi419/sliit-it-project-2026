@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
     private static final Logger logger = LoggerFactory.getLogger(BookingServiceImpl.class);
 
@@ -30,6 +29,13 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final NotificationService notificationService;
+
+    public BookingServiceImpl(BookingRepository bookingRepository, UserRepository userRepository, ResourceRepository resourceRepository, NotificationService notificationService) {
+        this.bookingRepository = bookingRepository;
+        this.userRepository = userRepository;
+        this.resourceRepository = resourceRepository;
+        this.notificationService = notificationService;
+    }
 
     @Override
     public ResponseEntity<?> createBooking(Map<String, Object> payload, String email) {

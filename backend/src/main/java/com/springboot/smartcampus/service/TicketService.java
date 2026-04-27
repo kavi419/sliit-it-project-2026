@@ -19,4 +19,6 @@ public interface TicketService {
     void deleteComment(Long commentId, Long userId, String userRole);
     List<TicketCommentResponse> getComments(String ticketId);
     List<TicketAttachmentResponse> getAttachments(String ticketId);
+    TicketResponse updateTicket(String id, CreateTicketRequest request, Long userId, String userRole);
+    void deleteTicket(String id, Long userId, String userRole);
 }

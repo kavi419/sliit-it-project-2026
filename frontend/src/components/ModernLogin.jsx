@@ -3,7 +3,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { Mail, Lock, User, Shield } from 'lucide-react';
+import { Mail, Lock, User, Shield, Wrench } from 'lucide-react';
+
 const slideVariants = {
   enter: (dir) => ({ x: dir > 0 ? 56 : -56, opacity: 0 }),
   center: { x: 0, opacity: 1, transition: { duration: 0.38, ease: [0.4, 0, 0.2, 1] } },
@@ -96,11 +97,9 @@ const GoogleBtn = ({ onClick, label = 'Continue with Google' }) => (
   </button>
 );
 
-// ─── Premium Connectivity Animation ──────────────────────────────────────────
 const ConnectivityAnimation = () => {
   return (
     <div className="absolute inset-0 bg-[#0a0a1a] overflow-hidden">
-      {/* Dynamic Gradient Background */}
       <motion.div
         animate={{
           background: [
@@ -112,8 +111,6 @@ const ConnectivityAnimation = () => {
         transition={{ duration: 15, repeat: Infinity, ease: 'linear' }}
         className="absolute inset-0"
       />
-
-      {/* Floating Connectivity Nodes */}
       <div className="absolute inset-0 opacity-40">
         {[...Array(20)].map((_, i) => (
           <motion.div
@@ -128,7 +125,6 @@ const ConnectivityAnimation = () => {
             className="absolute w-1.5 h-1.5 bg-indigo-400 rounded-full shadow-[0_0_12px_#6366f1]"
           />
         ))}
-        {/* SVG Lines Connecting Nodes (Animated) */}
         <svg className="absolute inset-0 w-full h-full">
           {[...Array(10)].map((_, i) => (
             <motion.line
@@ -145,8 +141,6 @@ const ConnectivityAnimation = () => {
           ))}
         </svg>
       </div>
-
-      {/* Glowing Orbs */}
       <motion.div
         animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
@@ -157,8 +151,6 @@ const ConnectivityAnimation = () => {
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut', delay: 3 }}
         className="absolute bottom-1/4 left-1/4 w-[400px] h-[400px] bg-violet-600/20 rounded-full blur-[100px]"
       />
-
-      {/* Premium Centered Logo & Text */}
       <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-12">
         <motion.div
           whileHover={{ scale: 1.05 }}
@@ -166,7 +158,6 @@ const ConnectivityAnimation = () => {
         >
           <div className="absolute inset-0 bg-indigo-500 blur-3xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
           <div className="relative w-48 h-48 bg-white/5 backdrop-blur-2xl rounded-[2.5rem] border border-white/10 flex items-center justify-center shadow-2xl overflow-hidden">
-            {/* Scanning effect */}
             <motion.div
               animate={{ y: [-100, 200] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
@@ -177,18 +168,14 @@ const ConnectivityAnimation = () => {
             </svg>
           </div>
         </motion.div>
-
         <h2 className="text-4xl font-black text-white tracking-tight mb-4">
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400">
             Smart Campus Hub
           </span>
         </h2>
         <p className="text-indigo-200/60 font-medium text-lg max-w-sm mx-auto leading-relaxed">
-          The central pulse of your academic journey.
-          Connected, intelligent, and designed for you.
+          The central pulse of your academic journey. Connected, intelligent, and designed for you.
         </p>
-
-        {/* Floating Stats Or Badges */}
         <div className="flex gap-4 mt-12">
           {[{ label: 'Fast', icon: '⚡' }, { label: 'Secure', icon: '🔒' }, { label: 'Smart', icon: '🧠' }].map((item, idx) => (
             <motion.div
@@ -207,7 +194,6 @@ const ConnectivityAnimation = () => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 const ModernLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -226,11 +212,7 @@ const ModernLogin = () => {
   const handleEmailNext = async (e) => {
     e.preventDefault();
     const trimmedEmail = email.trim().toLowerCase();
-
-    if (!trimmedEmail) {
-      setError('Please enter your email address.');
-      return;
-    }
+    if (!trimmedEmail) { setError('Please enter your email address.'); return; }
 
     //Email Format Validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -254,35 +236,38 @@ const ModernLogin = () => {
     try {
       const { data } = await axios.post('/api/auth/login', { email: email.trim().toLowerCase(), password }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
-      navigate(data.role === 'ADMIN' && data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
+      if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') navigate('/waiting');
+      else if (data.role === 'TECHNICIAN') navigate('/tickets/dashboard');
+      else navigate('/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Invalid email or password.'); }
     finally { setLoading(false); }
   };
 
-  //Password Length Validation
   const handleSignUp = async (e) => {
     e.preventDefault();
     if (!password.trim()) { setError('Please create a password.'); return; }
+    
+    //Password Length Validation
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    
     setLoading(true); setError('');
     try {
       const { data } = await axios.post('/api/auth/register', { email: email.trim().toLowerCase(), password, role }, { withCredentials: true });
       login({ email: email.trim().toLowerCase(), name: email.split('@')[0], role: data.role, status: data.status });
-      navigate(data.status === 'PENDING_ADMIN' ? '/waiting' : '/dashboard');
+      if (data.role === 'ADMIN' && data.status === 'PENDING_ADMIN') navigate('/waiting');
+      else if (data.role === 'TECHNICIAN') navigate('/tickets/dashboard');
+      else navigate('/dashboard');
     } catch (err) { setError(err.response?.data?.error || 'Registration failed. Please try again.'); }
     finally { setLoading(false); }
   };
 
   const handleGoogle = () => { window.location.href = 'http://localhost:8080/oauth2/authorization/google'; };
 
-  // ── Step renders ────────────────────────────────────────────────────────────
   const renderStep = () => {
     switch (step) {
-
       case STEP_EMAIL:
         return (
           <motion.div key="email" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit">
-            {/* Logo mark */}
             <div className="flex items-center gap-3 mb-12">
               <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center shadow-xl shadow-indigo-500/20">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -291,15 +276,11 @@ const ModernLogin = () => {
               </div>
               <span className="text-lg font-black text-slate-900 tracking-tight">Smart Campus Hub</span>
             </div>
-
             <h2 className="text-[32px] font-black text-slate-900 tracking-tight mb-2">Get Started Now</h2>
             <p className="text-slate-500 font-medium mb-10">Enter your university email to join the hub.</p>
-
             <form className="space-y-6" onSubmit={handleEmailNext}>
               <div>
-                <label htmlFor="input-email" className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-widest">
-                  Email Address
-                </label>
+                <label htmlFor="input-email" className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-widest">Email Address</label>
                 <input
                   id="input-email" type="email" placeholder="you@university.edu"
                   value={email} onChange={(e) => setEmail(e.target.value)} autoFocus
@@ -318,33 +299,24 @@ const ModernLogin = () => {
                 {loading ? <Spinner /> : 'Continue'}
               </button>
             </form>
-
             <Divider />
             <GoogleBtn onClick={handleGoogle} />
-
             <p className="text-center text-xs text-slate-400 mt-8 font-medium">
-              By continuing you agree to our{' '}
-              <a href="#" className="text-indigo-600 hover:underline font-bold">Terms</a> &{' '}
-              <a href="#" className="text-indigo-600 hover:underline font-bold">Privacy Policy</a>
+              By continuing you agree to our <a href="#" className="text-indigo-600 hover:underline font-bold">Terms</a> & <a href="#" className="text-indigo-600 hover:underline font-bold">Privacy Policy</a>
             </p>
           </motion.div>
         );
-
       case STEP_SIGNIN:
         return (
           <motion.div key="signin" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit">
             <BackBtn onClick={goBack} />
-
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mb-6">
               <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <h2 className="text-[32px] font-black text-slate-900 tracking-tight">Sign In</h2>
-            <p className="text-slate-500 font-medium mb-10">
-              Welcome back, <span className="text-indigo-600 font-bold">{email}</span>
-            </p>
-
+            <p className="text-slate-500 font-medium mb-10">Welcome back, <span className="text-indigo-600 font-bold">{email}</span></p>
             <form className="space-y-6" onSubmit={handleSignIn}>
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -370,22 +342,15 @@ const ModernLogin = () => {
             </form>
           </motion.div>
         );
-
       case STEP_SIGNUP:
         return (
           <motion.div key="signup" custom={direction} variants={slideVariants} initial="enter" animate="center" exit="exit">
             <BackBtn onClick={goBack} />
-
             <h2 className="text-[32px] font-black text-slate-900 tracking-tight mb-2">Join the Hub</h2>
-            <p className="text-slate-500 font-medium mb-10">
-              Creating account for <span className="text-indigo-600 font-bold">{email}</span>
-            </p>
-
+            <p className="text-slate-500 font-medium mb-10">Creating account for <span className="text-indigo-600 font-bold">{email}</span></p>
             <form className="space-y-6" onSubmit={handleSignUp}>
               <div>
-                <label htmlFor="password-signup" className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-widest">
-                  Create Password
-                </label>
+                <label htmlFor="password-signup" className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-widest">Create Password</label>
                 <input
                   id="password-signup" type="password" placeholder="Min. 6 characters"
                   value={password} onChange={(e) => setPassword(e.target.value)} autoFocus
@@ -394,14 +359,16 @@ const ModernLogin = () => {
                     text-slate-900 text-sm font-semibold shadow-sm"
                 />
               </div>
-
-              {/* Role Selector */}
               <div>
                 <label className="block text-xs font-bold text-slate-800 mb-2 uppercase tracking-widest">Select Role</label>
-                <div className="grid grid-cols-2 gap-4">
-                  {[['STUDENT', <User className="w-5 h-5" />, 'Student'], ['ADMIN', <Shield className="w-5 h-5" />, 'Admin']].map(([r, iconNode, label]) => (
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    ['STUDENT', <User className="w-5 h-5" />, 'Student'],
+                    ['ADMIN', <Shield className="w-5 h-5" />, 'Admin'],
+                    ['TECHNICIAN', <Wrench className="w-5 h-5" />, 'Technician']
+                  ].map(([r, iconNode, label]) => (
                     <button key={r} type="button" id={`role-${r.toLowerCase()}`} onClick={() => setRole(r)}
-                      className={`py-4 px-4 rounded-xl border-2 font-bold text-sm transition-all duration-200 flex flex-col items-center gap-2
+                      className={`py-4 px-2 rounded-xl border-2 font-bold text-xs transition-all duration-200 flex flex-col items-center gap-2
                         ${role === r
                           ? `border-indigo-600 bg-indigo-50 text-indigo-700 shadow-inner`
                           : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-indigo-200 hover:bg-white'}`}
@@ -413,7 +380,7 @@ const ModernLogin = () => {
                 </div>
               </div>
 
-              //Terms and Conditions Checkbox validation
+              {/* Terms and Conditions Checkbox validation */}
               <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl">
                 <input type="checkbox" id="terms" className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" required />
                 <label htmlFor="terms" className="text-xs text-slate-600 font-semibold leading-relaxed">
@@ -432,14 +399,12 @@ const ModernLogin = () => {
             </form>
           </motion.div>
         );
-
       default: return null;
     }
   };
 
   return (
     <div className="w-full h-screen flex flex-col-reverse lg:flex-row overflow-hidden bg-white">
-      {/* Left — Premium Form panel */}
       <div className="w-full lg:w-[42%] h-full flex flex-col justify-center px-8 sm:px-16 lg:px-24 bg-white overflow-y-auto z-20 relative">
         <div className="w-full max-w-[420px] mx-auto py-16">
           <AnimatePresence mode="wait" custom={direction}>
@@ -447,8 +412,6 @@ const ModernLogin = () => {
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Right — Premium Animation panel */}
       <div className="hidden lg:block lg:w-[58%] h-full relative z-10 shadow-[-20px_0_40px_rgba(0,0,0,0.1)]">
         <ConnectivityAnimation />
       </div>

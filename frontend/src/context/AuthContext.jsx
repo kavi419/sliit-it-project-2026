@@ -47,8 +47,8 @@ export const AuthProvider = ({ children }) => {
               id:     res.data.id     || parsed.id,
               email:  res.data.email  || parsed.email,
               name:   res.data.name   || parsed.name || 'Campus User',
-              role:   res.data.role   || 'STUDENT',
-              status: res.data.status || 'ACTIVE',
+              role:   res.data.role   || parsed.role || 'STUDENT',
+              status: res.data.status || parsed.status || 'ACTIVE',
             };
             // Only update if something actually changed (avoids unnecessary re-renders)
             if (fresh.role !== parsed.role || fresh.status !== parsed.status || fresh.id !== parsed.id) {
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }) => {
     axios.get('/api/user/me', { withCredentials: true })
       .then(res => {
         const u = {
-          id:     res.data.id || null,
+          id:     res.data.id     || null,
           email:  res.data.email  || '',
           name:   res.data.name   || 'Campus User',
           role:   res.data.role   || 'STUDENT',
