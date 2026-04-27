@@ -26,21 +26,30 @@ public class TicketController {
 
     private User getAuthenticatedUser(OAuth2User oauth2User) {
         if (oauth2User == null) {
-            String mockRole = request.getHeader("X-Mock-Role");
-            if (mockRole == null) mockRole = "USER";
-            
-            String mockEmail = mockRole.toLowerCase() + "@test.com";
+    String mockRole = request.getHeader("X-Mock-Role");
+    String mockName = request.getHeader("X-Mock-Name");
+    String mockEmail = request.getHeader("X-Mock-Email");
 
-            User testUser = userRepository.findByEmail(mockEmail).orElse(null);
-            if (testUser == null) {
-                testUser = new User();
-                testUser.setName("Mock " + mockRole);
-                testUser.setEmail(mockEmail);
-                testUser.setRole(mockRole.toUpperCase());
-                testUser = userRepository.save(testUser);
-            }
-            return testUser;
-        }
+    if (mockRole == null) mockRole = "STUDENT";
+    if (mockName == null) mockName = "Student User";
+    if (mockEmail == null) mockEmail = "student@test.com";
+
+    User testUser = userRepository.findByEmail(mockEmail).orElse(null);
+
+    if (testUser == null) {
+        testUser = new User();
+        testUser.setName(mockName);
+        testUser.setEmail(mockEmail);
+        testUser.setRole(mockRole.toUpperCase());
+        testUser = userRepository.save(testUser);
+    } else {
+        testUser.setName(mockName);
+        testUser.setRole(mockRole.toUpperCase());
+        testUser = userRepository.save(testUser);
+    }
+
+    return testUser;
+}
         String email = oauth2User.getAttribute("email");
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found in database"));

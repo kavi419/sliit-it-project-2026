@@ -16,6 +16,7 @@ api.interceptors.request.use(
       const userStr = sessionStorage.getItem('sc_user');
       if (userStr) {
         const user = JSON.parse(userStr);
+        config.headers['X-Mock-Name'] = user.name || 'Student User';
         if (user.email) config.headers['X-Mock-Email'] = user.email;
         if (user.role) config.headers['X-Mock-Role'] = user.role;
       }
