@@ -2,6 +2,7 @@ package com.springboot.smartcampus.service;
 
 import com.springboot.smartcampus.dto.NotificationDTO;
 import com.springboot.smartcampus.enums.NotificationType;
+
 import java.util.List;
 
 public interface NotificationService {

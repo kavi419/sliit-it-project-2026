@@ -1,8 +1,17 @@
 package com.springboot.smartcampus.security;
 
 import com.springboot.smartcampus.enums.ResourceStatus;
+import com.springboot.smartcampus.enums.TicketCategory;
+import com.springboot.smartcampus.enums.TicketPriority;
+import com.springboot.smartcampus.enums.TicketStatus;
 import com.springboot.smartcampus.model.Resource;
+import com.springboot.smartcampus.model.User;
+import com.springboot.smartcampus.model.Booking;
+import com.springboot.smartcampus.model.Ticket;
 import com.springboot.smartcampus.repository.ResourceRepository;
+import com.springboot.smartcampus.repository.UserRepository;
+import com.springboot.smartcampus.repository.BookingRepository;
+import com.springboot.smartcampus.repository.TicketRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Configuration;
 
@@ -10,17 +19,18 @@ import java.time.LocalTime;
 import java.util.Arrays;
 
 @Configuration
+@org.springframework.context.annotation.Profile("!test")
 public class DataInitializer implements CommandLineRunner {
 
     private final ResourceRepository resourceRepository;
-    private final com.springboot.smartcampus.repository.UserRepository userRepository;
-    private final com.springboot.smartcampus.repository.BookingRepository bookingRepository;
-    private final com.springboot.smartcampus.repository.TicketRepository ticketRepository;
+    private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final TicketRepository ticketRepository;
 
     public DataInitializer(ResourceRepository resourceRepository, 
-                           com.springboot.smartcampus.repository.UserRepository userRepository,
-                           com.springboot.smartcampus.repository.BookingRepository bookingRepository,
-                           com.springboot.smartcampus.repository.TicketRepository ticketRepository) {
+                           UserRepository userRepository,
+                           BookingRepository bookingRepository,
+                           TicketRepository ticketRepository) {
         this.resourceRepository = resourceRepository;
         this.userRepository = userRepository;
         this.bookingRepository = bookingRepository;
@@ -76,9 +86,9 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // 1. Seed a System User if not exists
-        com.springboot.smartcampus.model.User systemUser = userRepository.findByEmail("system@smartcampus.com")
+        User systemUser = userRepository.findByEmail("system@smartcampus.com")
                 .orElseGet(() -> {
-                    com.springboot.smartcampus.model.User u = com.springboot.smartcampus.model.User.builder()
+                    User u = User.builder()
                             .email("system@smartcampus.com")
                             .name("System Demo")
                             .role("STUDENT")
@@ -89,7 +99,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // 2. Seed a Pending Admin for the User Management table
         if (userRepository.findByEmail("pending.admin@test.com").isEmpty()) {
-            userRepository.save(com.springboot.smartcampus.model.User.builder()
+            userRepository.save(User.builder()
                     .email("pending.admin@test.com")
                     .name("Jane Doe (Pending)")
                     .role("ADMIN")
@@ -100,7 +110,7 @@ public class DataInitializer implements CommandLineRunner {
         // 3. Seed some Sample Bookings if empty
         if (bookingRepository.count() == 0) {
             Resource lab = resourceRepository.findAll().get(0);
-            bookingRepository.save(com.springboot.smartcampus.model.Booking.builder()
+            bookingRepository.save(Booking.builder()
                     .user(systemUser)
                     .resourceName(lab.getName())
                     .purpose("Group Project Meeting")
@@ -110,7 +120,7 @@ public class DataInitializer implements CommandLineRunner {
                     .status("APPROVED")
                     .build());
             
-            bookingRepository.save(com.springboot.smartcampus.model.Booking.builder()
+            bookingRepository.save(Booking.builder()
                     .user(systemUser)
                     .resourceName("Study Room 101")
                     .purpose("Individual Study")
@@ -123,13 +133,13 @@ public class DataInitializer implements CommandLineRunner {
 
         // 4. Seed some Sample Tickets if empty
         if (ticketRepository.count() == 0) {
-            ticketRepository.save(com.springboot.smartcampus.model.Ticket.builder()
+            ticketRepository.save(Ticket.builder()
                     .ticketCode("TCK-DEMO-01")
                     .title("Projector Not Working")
                     .description("The projector in Lab A is not turning on. Tried different cables.")
-                    .category(com.springboot.smartcampus.enums.TicketCategory.EQUIPMENT)
-                    .priority(com.springboot.smartcampus.enums.TicketPriority.HIGH)
-                    .status(com.springboot.smartcampus.enums.TicketStatus.OPEN)
+                    .category(TicketCategory.EQUIPMENT)
+                    .priority(TicketPriority.HIGH)
+                    .status(TicketStatus.OPEN)
                     .location("Block A, Level 2")
                     .createdBy(systemUser)
                     .build());

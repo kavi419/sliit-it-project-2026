@@ -3,6 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, XCircle } from 'lucide-react';
 import api from '../../utils/axiosConfig';
 
+const isValidPreferredContact = (contact) => {
+  const value = contact.trim();
+  if (!value) return true;
+
+  const normalized = value.replace(/[\s-]/g, '');
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const sriLankaPhoneRegex = /^(?:0\d{9}|\+94\d{9}|94\d{9})$/;
+  const startsWithUppercase = /^[A-Z]/.test(value);
+
+  if (emailRegex.test(value)) {
+    return !startsWithUppercase;
+  }
+
+  return sriLankaPhoneRegex.test(normalized);
+};
+
 const EditTicketModal = ({ isOpen, onClose, onSuccess, ticket }) => {
   const [formData, setFormData] = useState({
     title: '',
@@ -38,8 +54,14 @@ const EditTicketModal = ({ isOpen, onClose, onSuccess, ticket }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     setError('');
+    const contact = formData.preferredContact.trim();
+    if (contact && !isValidPreferredContact(contact)) {
+      setError('Enter a valid email (must not start with a capital letter) or Sri Lankan phone number (e.g. 0771234567 or +94771234567).');
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       await api.put(`/api/tickets/${ticket.id}`, formData);
@@ -142,6 +164,7 @@ const EditTicketModal = ({ isOpen, onClose, onSuccess, ticket }) => {
                     <input name="preferredContact" value={formData.preferredContact} onChange={handleInputChange}
                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                            placeholder="Phone number or email" />
+                    <p className="text-xs text-slate-500 font-medium">Use a valid email or contact number.</p>
                  </div>
               </div>
 
