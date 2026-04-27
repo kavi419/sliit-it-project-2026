@@ -1,7 +1,7 @@
 package com.springboot.smartcampus.controller;
 
 import com.springboot.smartcampus.dto.NotificationDTO;
-import com.springboot.smartcampus.model.UserEntity;
+import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class NotificationController {
             email = auth.getName();
         }
 
-        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findByEmail(email).orElse(null);
         return user != null ? user.getId() : null;
     }
 
