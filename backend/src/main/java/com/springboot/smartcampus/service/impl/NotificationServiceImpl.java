@@ -1,4 +1,4 @@
-package com.springboot.smartcampus.service;
+package com.springboot.smartcampus.service.impl;
 
 import com.springboot.smartcampus.dto.NotificationDTO;
 import com.springboot.smartcampus.enums.NotificationType;
@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationService {
+public class NotificationServiceImpl {
 
     private final NotificationRepository notificationRepository;
 

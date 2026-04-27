@@ -1,9 +1,9 @@
 package com.springboot.smartcampus.controller;
 
 import com.springboot.smartcampus.dto.NotificationDTO;
-import com.springboot.smartcampus.model.UserEntity;
+import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
-import com.springboot.smartcampus.service.NotificationService;
+import com.springboot.smartcampus.service.impl.NotificationServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationController {
 
-    private final NotificationService notificationService;
+    private final NotificationServiceImpl notificationService;
     private final UserRepository userRepository;
 
     // Helper method to get the current logged-in user's ID using both OAuth and Username/Password methods
@@ -35,7 +35,7 @@ public class NotificationController {
             email = auth.getName();
         }
 
-        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findByEmail(email).orElse(null);
         return user != null ? user.getId() : null;
     }
 
