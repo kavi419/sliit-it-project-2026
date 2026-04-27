@@ -11,4 +11,5 @@ public interface DashboardService {
     ResponseEntity<Map<String, Object>> getUserMe(OAuth2User oauthUser, String email);
     ResponseEntity<List<Map<String, Object>>> getPendingUsers();
     ResponseEntity<Map<String, String>> approveUser(Long id);
+    ResponseEntity<Map<String, String>> rejectUser(Long id);
 }

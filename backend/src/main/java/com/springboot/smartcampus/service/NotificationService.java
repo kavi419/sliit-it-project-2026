@@ -5,6 +5,7 @@ import com.springboot.smartcampus.enums.NotificationType;
 import com.springboot.smartcampus.model.NotificationEntity;
 import com.springboot.smartcampus.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public void createNotification(Long userId, String message, NotificationType type, Long relatedEntityId) {
@@ -27,6 +29,22 @@ public class NotificationService {
                 .relatedEntityId(relatedEntityId)
                 .build();
         notificationRepository.save(notification);
+        
+        // Push Real-time Notification via WebSocket
+        NotificationDTO dto = mapToDTO(notification);
+        messagingTemplate.convertAndSendToUser(
+            userId.toString(), 
+            "/queue/notifications", 
+            dto
+        );
+        
+        // Also push unread count update
+        int unreadCount = getUnreadCount(userId);
+        messagingTemplate.convertAndSendToUser(
+            userId.toString(), 
+            "/queue/unread-count", 
+            unreadCount
+        );
     }
 
     public List<NotificationDTO> getUserNotifications(Long userId) {
@@ -50,6 +68,13 @@ public class NotificationService {
         
         notification.setRead(true);
         notificationRepository.save(notification);
+        
+        // Notify unread count change
+        messagingTemplate.convertAndSendToUser(
+            userId.toString(), 
+            "/queue/unread-count", 
+            getUnreadCount(userId)
+        );
     }
     
     @Transactional
@@ -59,6 +84,13 @@ public class NotificationService {
                 .collect(Collectors.toList());
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
+        
+        // Notify unread count is now 0
+        messagingTemplate.convertAndSendToUser(
+            userId.toString(), 
+            "/queue/unread-count", 
+            0
+        );
     }
 
     @Transactional

@@ -73,11 +73,26 @@ public class DashboardServiceImpl implements DashboardService {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @Override
+    public ResponseEntity<Map<String, String>> rejectUser(Long id) {
+        return userRepository.findById(id)
+                .map(u -> {
+                    u.setStatus("REJECTED");
+                    userRepository.save(u);
+
+                    Map<String, String> body = new HashMap<>();
+                    body.put("message", "User " + u.getEmail() + " registration rejected.");
+                    return ResponseEntity.ok(body);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     private ResponseEntity<Map<String, Object>> buildUserResponse(String email, Map<String, Object> baseAttributes) {
         User dbUser = userRepository.findByEmail(email).orElse(null);
         Map<String, Object> response = new HashMap<>(baseAttributes);
 
         if (dbUser != null) {
+            response.put("id",     dbUser.getId());
             response.put("role",   dbUser.getRole());
             response.put("status", dbUser.getStatus() != null ? dbUser.getStatus() : "ACTIVE");
             response.put("name",   dbUser.getName());

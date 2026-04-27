@@ -177,15 +177,35 @@ const ResourceCard = ({ resource, onEdit, onDelete, onStatusChange }) => {
         {resource.description && <p className="text-sm text-slate-500 leading-relaxed line-clamp-3">{resource.description}</p>}
 
         <div className="flex flex-wrap gap-2 pt-2">
-          <button onClick={() => onEdit(resource)} className="flex-1 min-w-[110px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
-            <Edit3 className="w-4 h-4" /> Edit
-          </button>
-          <button onClick={() => onStatusChange(resource)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">
-            Toggle Status
-          </button>
-          <button onClick={() => onDelete(resource.id)} className="px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 font-bold hover:bg-rose-50">
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {onEdit ? (
+            <>
+              <button onClick={() => onEdit(resource)} className="flex-1 min-w-[110px] px-4 py-2.5 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 flex items-center justify-center gap-2">
+                <Edit3 className="w-4 h-4" /> Edit
+              </button>
+              <button onClick={() => onStatusChange(resource)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50">
+                Toggle Status
+              </button>
+              <button onClick={() => onDelete(resource.id)} className="px-4 py-2.5 rounded-xl border border-rose-200 text-rose-600 font-bold hover:bg-rose-50">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => onBookNow && onBookNow(resource.id)}
+              className="flex-1 px-6 py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95"
+            >
+              Book Now
+            </button>
+          )}
+          {/* Always show a small Book button for Admin testing too */}
+          {onEdit && (
+            <button 
+              onClick={() => onEdit.onQuickBook(resource)}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800"
+            >
+              Book
+            </button>
+          )}
         </div>
       </div>
     </motion.article>
@@ -304,9 +324,34 @@ const Resources = () => {
     }
   };
 
-  if (!isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  const handleQuickBook = async (resource) => {
+    try {
+      const start = new Date();
+      start.setDate(start.getDate() + 1); // Tomorrow
+      start.setHours(10, 0, 0, 0); // 10:00 AM
+      const end = new Date(start);
+      end.setHours(12, 0, 0, 0); // 12:00 PM
+
+      const payload = {
+        resourceId: resource.id,
+        purpose: "Testing Notification System",
+        attendees: 5,
+        startTime: start.toISOString().split('.')[0], // Remove ms and Z
+        endTime: end.toISOString().split('.')[0]
+      };
+
+      await api.post('/api/bookings', payload);
+      alert('Booking created successfully! Check your notifications. 🔔');
+      fetchResources();
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Booking failed');
+    }
+  };
+
+  // Remove strict admin redirect to allow everyone to browse resources
+  // if (!isAdmin) {
+  //   return <Navigate to="/dashboard" replace />;
+  // }
 
   return (
     <div className="space-y-8">
@@ -317,16 +362,20 @@ const Resources = () => {
           <p className="text-slate-500 font-medium mt-2 max-w-2xl">Manage lecture halls, labs, meeting rooms, and equipment from one place. Search, filter, update status, and keep the booking flow consistent.</p>
         </div>
 
-        <button onClick={openCreate} className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm">
-          <Plus className="w-4 h-4" /> Add Resource
-        </button>
+        {isAdmin && (
+          <button onClick={openCreate} className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 shadow-sm">
+            <Plus className="w-4 h-4" /> Add Resource
+          </button>
+        )}
       </header>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard label="Active" value={stats.active} tone="bg-emerald-50 text-emerald-700" />
-        <StatCard label="Maintenance" value={stats.maintenance} tone="bg-amber-50 text-amber-700" />
-        <StatCard label="Out of Service" value={stats.out} tone="bg-rose-50 text-rose-700" />
-      </section>
+      {isAdmin && (
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard label="Active" value={stats.active} tone="bg-emerald-50 text-emerald-700" />
+          <StatCard label="Maintenance" value={stats.maintenance} tone="bg-amber-50 text-amber-700" />
+          <StatCard label="Out of Service" value={stats.out} tone="bg-rose-50 text-rose-700" />
+        </section>
+      )}
 
       <section className="glass-card p-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -358,9 +407,10 @@ const Resources = () => {
               <ResourceCard
                 key={resource.id}
                 resource={resource}
-                onEdit={openEdit}
-                onDelete={handleDelete}
-                onStatusChange={handleStatusToggle}
+                onBookNow={(id) => navigate(`/bookings?resourceId=${id}`)}
+                onEdit={isAdmin ? { ...openEdit, onQuickBook: handleQuickBook } : null}
+                onDelete={isAdmin ? handleDelete : null}
+                onStatusChange={isAdmin ? handleStatusToggle : null}
               />
             ))}
           </div>

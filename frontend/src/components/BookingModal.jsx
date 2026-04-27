@@ -104,7 +104,11 @@ const BookingModal = ({ isOpen, onClose, selectedResource, onBookingSuccess, boo
       if (!bookingToEdit) navigate('/bookings');
     } catch (err) {
       console.error('Booking failed:', err);
-      setError(err?.response?.data?.message || err?.response?.data || 'Failed to process booking. Please check for scheduling conflicts.');
+      const errorData = err?.response?.data;
+      const errorMsg = (typeof errorData === 'object' && errorData?.message) 
+        ? errorData.message 
+        : (typeof errorData === 'string' ? errorData : 'Failed to process booking. Please check for scheduling conflicts.');
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

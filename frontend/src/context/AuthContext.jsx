@@ -44,13 +44,14 @@ export const AuthProvider = ({ children }) => {
         axios.get(url, { withCredentials: true })
           .then(res => {
             const fresh = {
+              id:     res.data.id     || parsed.id,
               email:  res.data.email  || parsed.email,
               name:   res.data.name   || parsed.name || 'Campus User',
               role:   res.data.role   || 'STUDENT',
               status: res.data.status || 'ACTIVE',
             };
             // Only update if something actually changed (avoids unnecessary re-renders)
-            if (fresh.role !== parsed.role || fresh.status !== parsed.status) {
+            if (fresh.role !== parsed.role || fresh.status !== parsed.status || fresh.id !== parsed.id) {
               sessionStorage.setItem(SESSION_KEY, JSON.stringify(fresh));
               setUser(fresh);
             }
@@ -75,6 +76,7 @@ export const AuthProvider = ({ children }) => {
     axios.get('/api/user/me', { withCredentials: true })
       .then(res => {
         const u = {
+          id:     res.data.id || null,
           email:  res.data.email  || '',
           name:   res.data.name   || 'Campus User',
           role:   res.data.role   || 'STUDENT',
@@ -110,6 +112,7 @@ export const AuthProvider = ({ children }) => {
     axios.get(url, { withCredentials: true })
       .then(res => {
         const fresh = {
+          id:     res.data.id     || userData.id,
           email:  res.data.email  || userData.email,
           name:   res.data.name   || userData.name,
           role:   res.data.role   || userData.role,

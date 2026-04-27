@@ -3,10 +3,10 @@ import axios from 'axios';
 import { 
   User, Mail, Calendar, MapPin, ArrowRight, CheckCircle2, AlertCircle, 
   Shield, Users, Check, Clock, TrendingUp, BarChart3, Activity, PieChart as PieIcon,
-  Plus, Ban
+  Plus, Ban, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, Cell 
 } from 'recharts';
@@ -95,6 +95,7 @@ const UserManagementTab = () => {
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [approvingId, setApprovingId]   = useState(null);
+  const [rejectingId, setRejectingId]   = useState(null);
   const [toast, setToast]               = useState('');
 
   const fetchPending = () => {
@@ -119,6 +120,21 @@ const UserManagementTab = () => {
       setTimeout(() => setToast(''), 4000);
     } finally {
       setApprovingId(null);
+    }
+  };
+
+  const handleReject = async (id, email) => {
+    setRejectingId(id);
+    try {
+      await api.post(`/api/admin/reject/${id}`, {});
+      setToast(`🚫 ${email} registration rejected.`);
+      setPendingUsers(prev => prev.filter(u => u.id !== id));
+      setTimeout(() => setToast(''), 4000);
+    } catch {
+      setToast('❌ Rejection failed. Please try again.');
+      setTimeout(() => setToast(''), 4000);
+    } finally {
+      setRejectingId(null);
     }
   };
 
@@ -180,20 +196,37 @@ const UserManagementTab = () => {
                 </div>
               </div>
 
-              <button
-                id={`btn-approve-${u.id}`}
-                onClick={() => handleApprove(u.id, u.email)}
-                disabled={approvingId === u.id}
-                className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500
-                  text-white font-bold rounded-xl shadow-sm transition-all active:scale-95
-                  disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {approvingId === u.id
-                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : <Check className="w-4 h-4" />
-                }
-                Approve
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  id={`btn-approve-${u.id}`}
+                  onClick={() => handleApprove(u.id, u.email)}
+                  disabled={approvingId === u.id || rejectingId === u.id}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500
+                    text-white font-bold rounded-xl shadow-sm transition-all active:scale-95
+                    disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {approvingId === u.id
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <Check className="w-4 h-4" />
+                  }
+                  Approve
+                </button>
+
+                <button
+                  id={`btn-reject-${u.id}`}
+                  onClick={() => handleReject(u.id, u.email)}
+                  disabled={rejectingId === u.id || approvingId === u.id}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-rose-600 hover:bg-rose-500
+                    text-white font-bold rounded-xl shadow-sm transition-all active:scale-95
+                    disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {rejectingId === u.id
+                    ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    : <X className="w-4 h-4" />
+                  }
+                  Reject
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -319,6 +352,7 @@ const AnalyticsTab = () => {
 const Dashboard = () => {
   const { user }                          = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab]         = useState('overview');
   const [selectedResource, setSelectedResource] = useState(null);
   const [isModalOpen, setIsModalOpen]     = useState(false);
@@ -395,7 +429,15 @@ const Dashboard = () => {
     useEffect(() => {
       fetchResources();
       fetchBookings();
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []); // Only run once on mount
+
+    useEffect(() => {
+      if (location.state?.tab) {
+        setActiveTab(location.state.tab);
+        // Clear state to prevent tab switching on every re-render
+        window.history.replaceState({}, document.title);
+      }
+    }, [location.state]);
 
   const staggerContainer = {
     hidden: {},

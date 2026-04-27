@@ -8,6 +8,8 @@ import com.springboot.smartcampus.repository.BookingRepository;
 import com.springboot.smartcampus.repository.ResourceRepository;
 import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.BookingService;
+import com.springboot.smartcampus.service.NotificationService;
+import com.springboot.smartcampus.enums.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +29,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
+    private final NotificationService notificationService;
 
     @Override
     public ResponseEntity<?> createBooking(Map<String, Object> payload, String email) {
@@ -38,7 +41,15 @@ public class BookingServiceImpl implements BookingService {
 
             Resource resource = resolveBookableResource(payload);
             String purpose = (String) payload.get("purpose");
-            Integer attendees = payload.get("attendees") != null ? Integer.parseInt(payload.get("attendees").toString()) : 0;
+            Integer attendees = 0;
+            if (payload.get("attendees") != null) {
+                Object attr = payload.get("attendees");
+                if (attr instanceof Number n) {
+                    attendees = n.intValue();
+                } else {
+                    attendees = Integer.parseInt(attr.toString());
+                }
+            }
             LocalDateTime start = LocalDateTime.parse(payload.get("startTime").toString());
             LocalDateTime end = LocalDateTime.parse(payload.get("endTime").toString());
 
@@ -54,23 +65,23 @@ public class BookingServiceImpl implements BookingService {
 
             if (startTime.isBefore(openTime) || startTime.isAfter(closeTime) || 
                 endTime.isAfter(closeTime) || (endTime.equals(java.time.LocalTime.MIDNIGHT))) {
-                return ResponseEntity.badRequest().body("Bookings are only allowed between 8:00 AM and 10:00 PM.");
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Bookings are only allowed between 8:00 AM and 10:00 PM."));
             }
 
             if (isPublicHoliday(start.toLocalDate())) {
-                return ResponseEntity.badRequest().body("Bookings are not allowed on Public Holidays.");
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Bookings are not allowed on Public Holidays."));
             }
 
             // ── Past Date/Time Check ──
             if (start.isBefore(java.time.LocalDateTime.now())) {
-                return ResponseEntity.badRequest().body("Cannot create a booking for a past date or time.");
+                return ResponseEntity.badRequest().body(java.util.Map.of("message", "Cannot create a booking for a past date or time. Current server time: " + java.time.LocalDateTime.now()));
             }
 
             // ── Conflict Detection ──
             List<Booking> conflicts = bookingRepository.findOverlappingBookings(resource.getName(), start, end);
             if (!conflicts.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body("Conflict: This resource is already booked during the selected time.");
+                        .body(java.util.Map.of("message", "Conflict: This resource is already booked during the selected time."));
             }
 
             Booking booking = Booking.builder()
@@ -83,7 +94,21 @@ public class BookingServiceImpl implements BookingService {
                     .status("PENDING")
                     .build();
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(bookingRepository.save(booking));
+            Booking savedBooking = bookingRepository.save(booking);
+            
+            // Trigger Notification (Wrapped in try-catch to avoid breaking the main process)
+            try {
+                notificationService.createNotification(
+                    user.getId(), 
+                    "Your booking request for " + resource.getName() + " is pending approval.", 
+                    NotificationType.BOOKING_UPDATE, 
+                    savedBooking.getId()
+                );
+            } catch (Exception e) {
+                logger.warn("Notification failed but booking was successful: " + e.getMessage());
+            }
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedBooking);
         } catch (Exception e) {
             logger.error("Booking error: ", e);
             return ResponseEntity.badRequest().body("Invalid booking data: " + e.getMessage());
@@ -122,7 +147,21 @@ public class BookingServiceImpl implements BookingService {
         return bookingRepository.findById(id).map(b -> {
             b.setStatus("APPROVED");
             if (payload != null && payload.containsKey("reason")) b.setAdminReason(payload.get("reason"));
-            return ResponseEntity.ok(bookingRepository.save(b));
+            Booking saved = bookingRepository.save(b);
+            
+            // Trigger Notification
+            try {
+                notificationService.createNotification(
+                    b.getUser().getId(), 
+                    "Great news! Your booking for " + b.getResourceName() + " has been APPROVED.", 
+                    NotificationType.BOOKING_UPDATE, 
+                    b.getId()
+                );
+            } catch (Exception e) {
+                logger.warn("Notification failed for approval: " + e.getMessage());
+            }
+            
+            return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -134,7 +173,21 @@ public class BookingServiceImpl implements BookingService {
         return bookingRepository.findById(id).map(b -> {
             b.setStatus("REJECTED");
             b.setAdminReason(payload.get("reason"));
-            return ResponseEntity.ok(bookingRepository.save(b));
+            Booking saved = bookingRepository.save(b);
+            
+            // Trigger Notification
+            try {
+                notificationService.createNotification(
+                    b.getUser().getId(), 
+                    "Your booking for " + b.getResourceName() + " was rejected. Reason: " + b.getAdminReason(), 
+                    NotificationType.BOOKING_UPDATE, 
+                    b.getId()
+                );
+            } catch (Exception e) {
+                logger.warn("Notification failed for rejection: " + e.getMessage());
+            }
+            
+            return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -152,7 +205,21 @@ public class BookingServiceImpl implements BookingService {
             if (!isOwner && !isAdmin) return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             
             b.setStatus("CANCELLED");
-            return ResponseEntity.ok(bookingRepository.save(b));
+            Booking saved = bookingRepository.save(b);
+            
+            // Trigger Notification
+            try {
+                notificationService.createNotification(
+                    b.getUser().getId(), 
+                    "Booking for " + b.getResourceName() + " has been successfully cancelled.", 
+                    NotificationType.BOOKING_UPDATE, 
+                    b.getId()
+                );
+            } catch (Exception e) {
+                logger.warn("Notification failed for cancellation: " + e.getMessage());
+            }
+            
+            return ResponseEntity.ok(saved);
         }).orElse(ResponseEntity.notFound().build());
     }
 
@@ -232,10 +299,16 @@ public class BookingServiceImpl implements BookingService {
         String resourceIdValue = payload.get("resourceId") != null ? payload.get("resourceId").toString() : null;
         Resource resource;
 
-        if (resourceIdValue != null && !resourceIdValue.isBlank()) {
-            Long resourceId = Long.parseLong(resourceIdValue);
+        if (payload.get("resourceId") != null) {
+            Object ridObj = payload.get("resourceId");
+            Long resourceId;
+            if (ridObj instanceof Number n) {
+                resourceId = n.longValue();
+            } else {
+                resourceId = Long.parseLong(ridObj.toString());
+            }
             resource = resourceRepository.findById(resourceId)
-                    .orElseThrow(() -> new IllegalArgumentException("Resource not found"));
+                    .orElseThrow(() -> new IllegalArgumentException("Resource not found with ID: " + resourceId));
         } else {
             String resourceName = (String) payload.get("resourceName");
             if (resourceName == null || resourceName.isBlank()) {

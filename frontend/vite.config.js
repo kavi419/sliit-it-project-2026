@@ -8,12 +8,18 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
+  define: {
+    global: 'window'
+  },
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true
-        // No path rewrite — /api/* passes through to backend /api/* unchanged
+      },
+      '/images': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   }

@@ -24,6 +24,19 @@ const Bookings = () => {
     const [actionModal, setActionModal] = useState({ isOpen: false, booking: null, type: '', reason: '' });
     const [actionLoading, setActionLoading] = useState(false);
 
+    // Handle resourceId from URL
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const rid = params.get('resourceId');
+        if (rid) {
+            // Logic to open modal for new booking with pre-selected ID
+            setIsEditModalOpen(true);
+            setSelectedBooking({ resourceId: rid });
+            // Clean URL
+            navigate(location.pathname, { replace: true });
+        }
+    }, [location.search]);
+
     useEffect(() => {
         fetchBookings();
     }, [filterStatus, isAdmin]);
@@ -226,9 +239,19 @@ const Bookings = () => {
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight">
                         {isAdmin ? 'Manage All Bookings' : 'My Bookings'}
                     </h1>
-                    <p className="text-slate-500 mt-2 text-lg">
-                        {isAdmin ? 'Review and manage all campus resource requests.' : 'View and manage your resource reservations.'}
-                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                        <p className="text-slate-500 text-lg">
+                            {isAdmin ? 'Review and manage all campus resource requests.' : 'View and manage your resource reservations.'}
+                        </p>
+                        {!isAdmin && (
+                            <button 
+                                onClick={() => { setSelectedBooking(null); setIsEditModalOpen(true); }}
+                                className="px-5 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                            >
+                                + New Booking
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {isAdmin && (

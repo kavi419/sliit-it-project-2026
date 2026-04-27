@@ -39,6 +39,23 @@ public class SchemaFixRunner implements ApplicationRunner {
             "updated_at → nullable"
         );
 
+        // Add related_entity_id to notifications if missing
+        runSafe(
+            "ALTER TABLE notifications ADD COLUMN IF NOT EXISTS related_entity_id BIGINT",
+            "notifications.related_entity_id added"
+        );
+
+        // Drop old notifications_type_check constraint and recreate with USER_REGISTRATION
+        runSafe(
+            "ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check",
+            "notifications_type_check constraint dropped"
+        );
+        runSafe(
+            "ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (type IN " +
+            "('BOOKING_APPROVED','BOOKING_REJECTED','BOOKING_UPDATE','TICKET_UPDATE','NEW_COMMENT','SYSTEM_ALERT','USER_REGISTRATION'))",
+            "notifications_type_check constraint recreated with USER_REGISTRATION"
+        );
+
         log.info("SchemaFixRunner: done.");
     }
 

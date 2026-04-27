@@ -38,4 +38,9 @@ public class DashboardController {
     public ResponseEntity<Map<String, String>> approveUser(@PathVariable Long id) {
         return dashboardService.approveUser(id);
     }
+
+    @PostMapping("/api/admin/reject/{id}")
+    public ResponseEntity<Map<String, String>> rejectUser(@PathVariable Long id) {
+        return dashboardService.rejectUser(id);
+    }
 }

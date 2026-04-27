@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { NotificationProvider } from './context/NotificationContext';
 import MainLayout from './components/MainLayout';
 import Dashboard from './pages/Dashboard';
 import Resources from './pages/Resources';
@@ -11,11 +12,6 @@ import Bookings from './pages/Bookings';
 
 /**
  * ProtectedRoute — guards routes that require an active session.
- *
- * Rules:
- *  - No user in session  → redirect to /login
- *  - PENDING_ADMIN       → redirect to /waiting
- *  - Otherwise           → render children normally
  */
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -42,44 +38,30 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Default route */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <NotificationProvider>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/login" element={<ModernLogin />} />
+            <Route path="/waiting" element={<WaitingPage />} />
 
-          {/* Public routes */}
-          <Route path="/login" element={<ModernLogin />} />
-          <Route path="/waiting" element={<WaitingPage />} />
-
-          {/* Protected routes — all wrapped by MainLayout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/tickets/*" element={<TicketsMain />} />
- feature/sachini/incident-ticket
             <Route
-              path="/bookings"
               element={
                 <ProtectedRoute>
-                  <Bookings />
+                  <MainLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route path="/profile"  element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
-
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
- main
-            <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
-          </Route>
-        </Routes>
-      </Router>
+            >
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/resources" element={<Resources />} />
+              <Route path="/tickets/*" element={<TicketsMain />} />
+              <Route path="/bookings" element={<Bookings />} />
+              <Route path="/profile" element={<div className="p-10 text-2xl font-bold">Profile Settings Coming Soon...</div>} />
+              <Route path="/settings" element={<div className="p-10 text-2xl font-bold">System Settings Coming Soon...</div>} />
+            </Route>
+          </Routes>
+        </Router>
+      </NotificationProvider>
     </AuthProvider>
   );
 }

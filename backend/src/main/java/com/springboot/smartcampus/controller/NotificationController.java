@@ -1,7 +1,7 @@
 package com.springboot.smartcampus.controller;
 
 import com.springboot.smartcampus.dto.NotificationDTO;
-import com.springboot.smartcampus.model.UserEntity;
+import com.springboot.smartcampus.model.User;
 import com.springboot.smartcampus.repository.UserRepository;
 import com.springboot.smartcampus.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class NotificationController {
             email = auth.getName();
         }
 
-        UserEntity user = userRepository.findByEmail(email).orElse(null);
+        User user = userRepository.findByEmail(email).orElse(null);
         return user != null ? user.getId() : null;
     }
 
@@ -77,20 +77,5 @@ public class NotificationController {
         return ResponseEntity.ok().build();
     }
 
-    // ── TEMPORARY ENDPOINT FOR TESTING ──
-    @PostMapping("/test")
-    public ResponseEntity<String> createTestNotification(@RequestParam String msg, @RequestParam String type) {
-        Long userId = getCurrentUserId();
-        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
-        
-        com.springboot.smartcampus.enums.NotificationType notifType;
-        try {
-            notifType = com.springboot.smartcampus.enums.NotificationType.valueOf(type.toUpperCase());
-        } catch (Exception e) {
-            notifType = com.springboot.smartcampus.enums.NotificationType.SYSTEM_ALERT;
-        }
 
-        notificationService.createNotification(userId, msg, notifType, 999L);
-        return ResponseEntity.ok("Test notification created successfully!");
-    }
 }
