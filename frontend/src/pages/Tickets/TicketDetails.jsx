@@ -173,6 +173,21 @@ const TicketDetails = ({ role }) => {
   // Restriction: Only the original reporter (Owner) or Administrators can manage tickets (Edit/Delete). 
   const canManageTicket = ticket && user && isOwner;
 
+  const isAssignedTechnician =
+  ticket &&
+  user &&
+  user.role === 'TECHNICIAN' &&
+  (
+    String(user.id) === String(ticket.assignedTechnicianId) ||
+    user.name === ticket.assignedTechnician
+  );
+
+const canComment =
+  ticket &&
+  user &&
+  ticket.assignedTechnicianId &&
+  (isOwner || isAssignedTechnician);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -366,31 +381,41 @@ const TicketDetails = ({ role }) => {
              </div>
 
              {/* Add Comment */}
-             <div className="p-6 bg-white border-t border-slate-100 rounded-b-2xl">
-               <form onSubmit={handleAddComment} className="relative flex items-end gap-3">
-                 <textarea
-                   value={newComment}
-                   onChange={e => setNewComment(e.target.value)}
-                   onKeyDown={e => {
-                     if (e.key === 'Enter' && !e.shiftKey) {
-                       e.preventDefault();
-                       handleAddComment(e);
-                     }
-                   }}
-                   placeholder="Type your message..."
-                   className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 font-medium transition-all text-sm resize-none min-h-[56px] max-h-[120px]"
-                   rows={1}
-                 />
-                 <button 
-                   type="submit" 
-                   disabled={!newComment.trim()}
-                   className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm flex items-center justify-center shrink-0 mb-0.5"
-                 >
-                   <Send className="w-5 h-5 -ml-0.5" />
-                 </button>
-               </form>
-               <p className="text-[10px] font-bold text-slate-400 mt-3 text-center uppercase tracking-widest">Press Enter to send, Shift + Enter for new line</p>
-             </div>
+{canComment ? (
+  <div className="p-6 bg-white border-t border-slate-100 rounded-b-2xl">
+    <form onSubmit={handleAddComment} className="relative flex items-end gap-3">
+      <textarea
+        value={newComment}
+        onChange={e => setNewComment(e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleAddComment(e);
+          }
+        }}
+        placeholder="Type your message..."
+        className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 outline-none focus:bg-white focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 font-medium transition-all text-sm resize-none min-h-[56px] max-h-[120px]"
+        rows={1}
+      />
+      <button
+        type="submit"
+        disabled={!newComment.trim()}
+        className="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl disabled:opacity-50 disabled:hover:bg-indigo-600 transition-all shadow-sm flex items-center justify-center shrink-0 mb-0.5"
+      >
+        <Send className="w-5 h-5 -ml-0.5" />
+      </button>
+    </form>
+    <p className="text-[10px] font-bold text-slate-400 mt-3 text-center uppercase tracking-widest">
+      Press Enter to send, Shift + Enter for new line
+    </p>
+  </div>
+) : (
+  <div className="p-6 bg-slate-50 border-t border-slate-100 rounded-b-2xl text-center">
+    <p className="text-sm font-bold text-slate-500">
+      Messaging is only available between the reporter and assigned technician.
+    </p>
+  </div>
+)}
           </div>
         </div>
 

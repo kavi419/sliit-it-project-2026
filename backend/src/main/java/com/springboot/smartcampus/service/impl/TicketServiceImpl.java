@@ -159,29 +159,45 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    @Transactional
-    public TicketCommentResponse addComment(String ticketId, AddCommentRequest request, Long authorId) {
-        Ticket ticket = findTicketByIdentifier(ticketId);
-        User author = userRepository.findById(authorId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+@Transactional
+public TicketCommentResponse addComment(String ticketId, AddCommentRequest request, Long authorId) {
+    Ticket ticket = findTicketByIdentifier(ticketId);
 
-        TicketComment comment = TicketComment.builder()
-                .ticket(ticket)
-                .author(author)
-                .message(request.getMessage())
-                .build();
-        
-        comment = ticketCommentRepository.save(comment);
+    User author = userRepository.findById(authorId)
+            .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return TicketCommentResponse.builder()
-                .id(comment.getId())
-                .ticketId(ticket.getId())
-                .authorName(author.getName())
-                .authorId(author.getId())
-                .message(comment.getMessage())
-                .createdAt(comment.getCreatedAt())
-                .build();
+    boolean isReporter = ticket.getCreatedBy() != null
+            && ticket.getCreatedBy().getId().equals(authorId);
+
+    boolean isAssignedTechnician = ticket.getAssignedTechnician() != null
+            && ticket.getAssignedTechnician().getId().equals(authorId)
+            && "TECHNICIAN".equalsIgnoreCase(author.getRole());
+
+    if (ticket.getAssignedTechnician() == null) {
+        throw new RuntimeException("You can message only after a technician is assigned.");
     }
+
+    if (!isReporter && !isAssignedTechnician) {
+        throw new RuntimeException("Only the reporter and assigned technician can message on this ticket.");
+    }
+
+    TicketComment comment = TicketComment.builder()
+            .ticket(ticket)
+            .author(author)
+            .message(request.getMessage())
+            .build();
+
+    comment = ticketCommentRepository.save(comment);
+
+    return TicketCommentResponse.builder()
+            .id(comment.getId())
+            .ticketId(ticket.getId())
+            .authorName(author.getName())
+            .authorId(author.getId())
+            .message(comment.getMessage())
+            .createdAt(comment.getCreatedAt())
+            .build();
+}
 
     @Override
     @Transactional
@@ -207,17 +223,17 @@ public class TicketServiceImpl implements TicketService {
     }
 
     @Override
-    @Transactional
-    public void deleteComment(Long commentId, Long userId, String userRole) {
-        TicketComment comment = ticketCommentRepository.findById(commentId)
-                .orElseThrow(() -> new RuntimeException("Comment not found"));
-        
-        if (!comment.getAuthor().getId().equals(userId) && !"ADMIN".equals(userRole)) {
-            throw new RuntimeException("You do not have permission to delete this comment");
-        }
-        
-        ticketCommentRepository.delete(comment);
+@Transactional
+public void deleteComment(Long commentId, Long userId, String userRole) {
+    TicketComment comment = ticketCommentRepository.findById(commentId)
+            .orElseThrow(() -> new RuntimeException("Comment not found"));
+
+    if (!comment.getAuthor().getId().equals(userId)) {
+        throw new RuntimeException("You can only delete your own comments");
     }
+
+    ticketCommentRepository.delete(comment);
+}
 
     @Override
     public List<TicketCommentResponse> getComments(String ticketId) {
