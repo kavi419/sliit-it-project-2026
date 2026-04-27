@@ -42,9 +42,14 @@ import static org.junit.jupiter.api.Assertions.*;
     "spring.security.oauth2.client.provider.google.token-uri=https://oauth2.googleapis.com/token",
     "spring.security.oauth2.client.provider.google.user-info-uri=https://www.googleapis.com/oauth2/v3/userinfo",
     "spring.security.oauth2.client.provider.google.user-name-attribute=sub",
+    "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
     "spring.sql.init.mode=never"
 })
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
+@org.springframework.test.context.ActiveProfiles("test")
 @Transactional
 class ResourceUserJourneyIntegrationTest {
 
@@ -52,12 +57,12 @@ class ResourceUserJourneyIntegrationTest {
     private ResourceService resourceService;
 
     @Autowired
-    private BookingController bookingController;
+    private org.springframework.test.web.servlet.MockMvc mockMvc;
 
-    @MockitoBean
+    @org.springframework.boot.test.mock.mockito.MockBean
     private UserRepository userRepository;
 
-    @MockitoBean
+    @org.springframework.boot.test.mock.mockito.MockBean
     private BookingRepository bookingRepository;
 
     private User student;
@@ -74,17 +79,12 @@ class ResourceUserJourneyIntegrationTest {
         when(bookingRepository.findOverlappingBookings(any(), any(), any())).thenReturn(List.of());
         when(bookingRepository.save(any(Booking.class))).thenAnswer(inv -> inv.getArgument(0));
         when(bookingRepository.findByUser(student)).thenReturn(List.of());
-
-        // Set up Spring SecurityContext so BookingController.getAuthEmail() resolves our test user
-        Authentication auth = new UsernamePasswordAuthenticationToken(
-                "student@journey.com", null, List.of()
-        );
-        SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @Test
-    void fullUserJourney_AdminCreates_UserSearchesAndBooks() {
-        // 1. Admin creates a new resource
+    @org.springframework.security.test.context.support.WithMockUser(username = "student@journey.com")
+    void fullUserJourney_AdminCreates_UserSearchesAndBooks() throws Exception {
+        // 1. Admin creates a new resource (calling service directly is fine for admin setup)
         ResourceRequest createRequest = new ResourceRequest(
                 "Journey Lab", "Lab", 50, "Block J", ResourceStatus.ACTIVE,
                 LocalTime.of(9, 0), LocalTime.of(17, 0), null, "Test Journey Lab"
@@ -98,23 +98,20 @@ class ResourceUserJourneyIntegrationTest {
         );
         assertTrue(searchResults.getContent().stream().anyMatch(r -> r.name().equals("Journey Lab")));
 
-        // 3. User books the resource via SecurityContext authentication
-        Map<String, Object> bookingPayload = new HashMap<>();
-        bookingPayload.put("resourceId", String.valueOf(created.id()));
-        bookingPayload.put("startTime", "2026-05-01T10:00:00");
-        bookingPayload.put("endTime", "2026-05-01T12:00:00");
+        // 3. User books the resource via MockMvc to properly handle security context
+        String bookingJson = String.format("{\"resourceId\":\"%d\", \"startTime\":\"2026-05-02T10:00:00\", \"endTime\":\"2026-05-02T12:00:00\"}", created.id());
 
-        var bookingResponse = bookingController.createBooking(bookingPayload);
-
-        assertEquals(201, bookingResponse.getStatusCode().value());
-        Booking booking = (Booking) bookingResponse.getBody();
-        assertNotNull(booking);
-        assertEquals("Journey Lab", booking.getResourceName());
-        assertEquals("PENDING", booking.getStatus());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/bookings")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content(bookingJson))
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isCreated())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.resourceName").value("Journey Lab"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.status").value("PENDING"));
 
         // 4. User verifies booking in their personal list
-        var myListResponse = bookingController.getMyBookings();
-        List<Booking> myBookings = (List<Booking>) myListResponse.getBody();
-        assertNotNull(myBookings);
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/bookings/my"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
     }
 }
+

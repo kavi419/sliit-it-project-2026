@@ -4,6 +4,7 @@ import com.springboot.smartcampus.dto.NotificationDTO;
 import com.springboot.smartcampus.enums.NotificationType;
 import com.springboot.smartcampus.model.NotificationEntity;
 import com.springboot.smartcampus.repository.NotificationRepository;
+import com.springboot.smartcampus.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,10 +14,11 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class NotificationServiceImpl {
+public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    @Override
     @Transactional
     public void createNotification(Long userId, String message, NotificationType type, Long relatedEntityId) {
         NotificationEntity notification = NotificationEntity.builder()
@@ -29,16 +31,19 @@ public class NotificationServiceImpl {
         notificationRepository.save(notification);
     }
 
+    @Override
     public List<NotificationDTO> getUserNotifications(Long userId) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
+    @Override
     public int getUnreadCount(Long userId) {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
+    @Override
     @Transactional
     public void markAsRead(Long notificationId, Long userId) {
         NotificationEntity notification = notificationRepository.findById(notificationId)
@@ -52,6 +57,7 @@ public class NotificationServiceImpl {
         notificationRepository.save(notification);
     }
     
+    @Override
     @Transactional
     public void markAllAsRead(Long userId) {
         List<NotificationEntity> unread = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
@@ -61,6 +67,7 @@ public class NotificationServiceImpl {
         notificationRepository.saveAll(unread);
     }
 
+    @Override
     @Transactional
     public void deleteNotification(Long notificationId, Long userId) {
         NotificationEntity notification = notificationRepository.findById(notificationId)
