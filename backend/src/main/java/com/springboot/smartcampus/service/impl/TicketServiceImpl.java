@@ -282,9 +282,9 @@ public class TicketServiceImpl implements TicketService {
 public TicketResponse updateTicket(String id, CreateTicketRequest request, Long userId, String userRole) {
     Ticket ticket = findTicketByIdentifier(id);
 
-    if (!ticket.getCreatedBy().getId().equals(userId) && !"ADMIN".equals(userRole)) {
-        throw new RuntimeException("You do not have permission to update this ticket");
-    }
+    if (!ticket.getCreatedBy().getId().equals(userId)) {
+    throw new RuntimeException("Only the original reporter can update this ticket");
+}
 
     ticket.setTitle(request.getTitle());
     ticket.setDescription(request.getDescription());

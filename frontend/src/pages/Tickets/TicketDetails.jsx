@@ -171,7 +171,7 @@ const TicketDetails = ({ role }) => {
   );
   
   // Restriction: Only the original reporter (Owner) or Administrators can manage tickets (Edit/Delete). 
-  const canManageTicket = ticket && user && (isOwner || user.role === 'ADMIN');
+  const canManageTicket = ticket && user && isOwner;
 
   if (loading) {
     return (
