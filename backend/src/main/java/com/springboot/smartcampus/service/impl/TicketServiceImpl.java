@@ -276,4 +276,36 @@ public class TicketServiceImpl implements TicketService {
                 .updatedAt(ticket.getUpdatedAt())
                 .build();
     }
+
+    @Override
+@Transactional
+public TicketResponse updateTicket(String id, CreateTicketRequest request, Long userId, String userRole) {
+    Ticket ticket = findTicketByIdentifier(id);
+
+    if (!ticket.getCreatedBy().getId().equals(userId) && !"ADMIN".equals(userRole)) {
+        throw new RuntimeException("You do not have permission to update this ticket");
+    }
+
+    ticket.setTitle(request.getTitle());
+    ticket.setDescription(request.getDescription());
+    ticket.setCategory(request.getCategory());
+    ticket.setPriority(request.getPriority());
+    ticket.setLocation(request.getLocation());
+    ticket.setResourceName(request.getResourceName());
+    ticket.setPreferredContact(request.getPreferredContact());
+
+    return mapToResponse(ticketRepository.save(ticket));
+}
+
+@Override
+@Transactional
+public void deleteTicket(String id, Long userId, String userRole) {
+    Ticket ticket = findTicketByIdentifier(id);
+
+    if (!ticket.getCreatedBy().getId().equals(userId) && !"ADMIN".equals(userRole)) {
+        throw new RuntimeException("You do not have permission to delete this ticket");
+    }
+
+    ticketRepository.delete(ticket);
+}
 }
