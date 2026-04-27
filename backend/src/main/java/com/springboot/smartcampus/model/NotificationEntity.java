@@ -31,7 +31,8 @@ public class NotificationEntity {
     private NotificationType type;
 
     @Column(nullable = false)
-    private boolean isRead = false;
+    @Builder.Default
+private boolean isRead = false;
 
     // Optional: ID of the related entity (booking ID, ticket ID, etc.) for navigation
     private Long relatedEntityId;
